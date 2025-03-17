@@ -1,0 +1,47 @@
+[
+    {
+      "id": "ml-001",
+      "moduleId": "module-001",
+      "lessonId": "lesson-001",
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T10:00:00Z",
+      "updatedAt": "2023-07-01T10:30:00Z"
+    },
+    {
+      "id": "ml-002",
+      "moduleId": "module-001",
+      "lessonId": "lesson-002",
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T10:00:00Z",
+      "updatedAt": "2023-07-01T11:15:00Z"
+    },
+    {
+      "id": "ml-003",
+      "moduleId": "module-001",
+      "lessonId": "lesson-003",
+      "lectured": false,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T10:00:00Z",
+      "updatedAt": "2023-07-01T10:00:00Z"
+    },
+    {
+      "id": "ml-004",
+      "moduleId": "module-002",
+      "lessonId": "lesson-004",
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-15T14:30:00Z",
+      "updatedAt": "2023-07-15T15:00:00Z"
+    },
+    {
+      "id": "ml-005",
+      "moduleId": "module-002",
+      "lessonId": "lesson-005",
+      "lectured": false,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-15T14:30:00Z",
+      "updatedAt": "2023-07-15T14:30:00Z"
+    }
+  ]

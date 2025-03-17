@@ -1,0 +1,47 @@
+[
+    {
+      "id": "enroll-001",
+      "name": "Enrollment for Introdução à Programação",
+      "slug": "introducao-programacao",
+      "courseId": "course-001",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2025-02-02T18:10:08Z",
+      "updatedAt": "2025-02-02T18:10:08Z",
+      "createdBy": "cm6bntysq0005s911c7r7o87g",
+      "assignmentIds": ["assignment-001", "assignment-002"],
+      "classIds": ["class-001"],
+      "totalPrice": 299.99,
+      "enrollmentYear": 2025,
+      "startDate": "2025-02-15T00:00:00Z",
+      "endDate": "2025-06-15T00:00:00Z"
+    },
+    {
+      "id": "enroll-002",
+      "name": "Enrollment for Marketing Digital Avançado",
+      "slug": "marketing-digital-avancado",
+      "courseId": "course-002",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2025-02-02T18:10:08Z",
+      "updatedAt": "2025-02-02T18:10:08Z",
+      "createdBy": "cm6bntysq0005s911c7r7o87g",
+      "totalPrice": 399.99,
+      "enrollmentYear": 2025,
+      "startDate": "2025-03-01T00:00:00Z",
+      "endDate": "2025-07-01T00:00:00Z"
+    },
+    {
+      "id": "enroll-003",
+      "name": "Enrollment for Gestão de Projetos: Metodologias Ágeis",
+      "slug": "gestao-de-projetos",
+      "courseId": "course-003",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2025-02-02T18:10:08Z",
+      "updatedAt": "2025-02-02T18:10:08Z",
+      "createdBy": "cm6bntysq0005s911c7r7o87g",
+      "classIds": ["class-002", "class-003"],
+      "totalPrice": 349.99,
+      "enrollmentYear": 2025,
+      "startDate": "2025-04-01T00:00:00Z",
+      "endDate": "2025-08-01T00:00:00Z"
+    }
+  ]

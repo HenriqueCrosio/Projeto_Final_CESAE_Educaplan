@@ -1,0 +1,722 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator seed {
+  provider = "prisma-client-js"
+  output   = "./seed"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  emailVerified  DateTime?
+  userApiToken   String    @unique @default(cuid())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastAccessedAt DateTime?
+  isActive       Boolean   @default(true)
+  isDeleted      Boolean   @default(false)
+  profile        Profile?
+
+  accounts Account[]
+  sessions Session[]
+  roles    UserRole[]
+  comments Comment[]
+  teacher  Teacher?
+  student  Student?
+  admin    Admin?
+
+  @@index([email, isActive])
+  @@index([userApiToken])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Profile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  firstName   String?
+  lastName    String?
+  displayName String?
+  bio         String?
+  birthDate   DateTime?
+  phoneNumber String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  users       UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  oauth_token_secret String?
+  oauth_token        String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Teacher {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization    String?
+  moduleAssignments ModuleAssignment[]
+  createdCourses    Course[]           @relation("CourseCreator")
+  ownedCourses      Course[]           @relation("CourseOwner")
+  createdModules    Module[]           @relation("ModuleCreator")
+  ownedModules      Module[]           @relation("ModuleOwner")
+  createdExercises  Exercise[]         @relation("ExerciseCreator")
+  ownedExercises    Exercise[]         @relation("ExerciseOwner")
+  createdExams      Exam[]             @relation("ExamCreator")
+  ownedExams        Exam[]             @relation("ExamOwner")
+  createdClients    Client[]
+  events            Event[]            @relation("EventCreator")
+  notifications     Notification[]
+
+  purchases     PurchasedItem[]
+  rentalPeriods RentalPeriod[]
+
+  createdMaterial Material[] @relation("MaterialCreator")
+  ownedMaterial   Material[] @relation("MaterialOwner")
+
+  addedStudents Student[] @relation("AddedStudents")
+
+  classes Class[]
+
+  lessonsSchedule LessonSchedule[]
+
+  enrollments Enrollment[]
+
+  teams Team[]
+}
+
+model Student {
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId     String         @unique
+  enrollYear    Int
+  classes       Class[]
+  teams         Team[]
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  comments      Comment[]
+  addedById     String
+  addedBy       Teacher        @relation("AddedStudents", fields: [addedById], references: [id])
+
+  @@index([studentId])
+}
+
+model Course {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  name        String
+  description String?
+  category    String
+  status      CourseStatusEnum @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  creatorId   String
+  creator     Teacher          @relation("CourseCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       Teacher          @relation("CourseOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  modules     Module[]
+  materials   Material[]
+  enrollments Enrollment[]
+  events      Event[]
+  classes     Class[]
+  comments    Comment[]
+
+  publishStatus PublishStatusEnum @default(PRIVATE)
+  forSale       ShopItemForSale?
+  forRent       ShopItemForRent?
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([ownerId])
+  @@index([id, status])
+}
+
+model Module {
+  id                    String             @id @default(cuid())
+  slug                  String             @unique
+  name                  String
+  description           String?
+  category              String
+  totalHours            Int
+  averageHoursPerLesson Float              @default(2)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  creatorId             String
+  creator               Teacher            @relation("ModuleCreator", fields: [creatorId], references: [id])
+  ownerId               String
+  owner                 Teacher            @relation("ModuleOwner", fields: [ownerId], references: [id])
+  courseId              String
+  course                Course             @relation(fields: [courseId], references: [id])
+  topics                Topic[]
+  materials             Material[]
+  assignments           ModuleAssignment[]
+  exams                 Exam[]
+  lessons               Lesson[]
+  events                Event[]
+  comments              Comment[]
+
+  publishStatus PublishStatusEnum @default(PRIVATE)
+  forSale       ShopItemForSale?
+  forRent       ShopItemForRent?
+
+  @@index([creatorId])
+  @@index([ownerId])
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  duration    Float
+  order       Int
+  moduleId    String
+  module      Module           @relation(fields: [moduleId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  schedules   LessonSchedule[]
+  comments    Comment[]
+
+  @@index([moduleId])
+}
+
+model Topic {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  order       Int
+  moduleId    String
+  module      Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  materials   Material[]
+  exercises   Exercise[]
+  objectives  Objective[]
+  comments    Comment[]
+
+  @@index([moduleId, order])
+}
+
+model Objective {
+  id          String   @id @default(cuid())
+  description String
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([topicId])
+}
+
+model ModuleAssignment {
+  id         String           @id @default(cuid())
+  moduleId   String
+  module     Module           @relation(fields: [moduleId], references: [id])
+  teacherId  String
+  teacher    Teacher          @relation(fields: [teacherId], references: [id])
+  courseId   String
+  hourlyRate Int
+  currency   CurrencyTypeEnum @default(EUR)
+
+  startDate DateTime
+  endDate   DateTime
+
+  @@unique([moduleId, teacherId, courseId, startDate, endDate])
+  @@index([moduleId])
+  @@index([teacherId])
+  @@index([courseId])
+  @@index([startDate, endDate])
+}
+
+enum CourseStatusEnum {
+  DRAFT
+  COMPLETED
+  ARCHIVED
+}
+
+model Exercise {
+  id             String              @id @default(cuid())
+  title          String
+  description    String?
+  content        String
+  type           ExerciseTypeEnum
+  difficulty     DifficultyLevelEnum
+  points         Int
+  timeLimit      Int?
+  topicId        String?
+  topic          Topic?              @relation(fields: [topicId], references: [id])
+  isTeamExercise Boolean             @default(false)
+  examExercises  ExamExercise[]
+  creatorId      String
+  creator        Teacher             @relation("ExerciseCreator", fields: [creatorId], references: [id])
+  ownerId        String
+  owner          Teacher             @relation("ExerciseOwner", fields: [ownerId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  teams          Team[]
+  clientId       String?
+  client         Client?             @relation(fields: [clientId], references: [id])
+  comments       Comment[]
+
+  publishStatus PublishStatusEnum @default(PRIVATE)
+  forSale       ShopItemForSale?
+  forRent       ShopItemForRent?
+
+  @@index([clientId])
+  @@index([topicId])
+  @@index([type])
+  @@index([difficulty])
+  @@index([creatorId])
+  @@index([ownerId])
+}
+
+enum ExerciseTypeEnum {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  LONG_ANSWER
+  CODE
+  FILE_UPLOAD
+}
+
+enum DifficultyLevelEnum {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model Exam {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  type        ExamTypeEnum
+  moduleId    String
+  module      Module         @relation(fields: [moduleId], references: [id])
+  date        DateTime
+  duration    Int
+  maxScore    Float
+  exercises   ExamExercise[]
+  creatorId   String
+  creator     Teacher        @relation("ExamCreator", fields: [creatorId], references: [id])
+  ownerId     String
+  owner       Teacher        @relation("ExamOwner", fields: [ownerId], references: [id])
+  comments    Comment[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  publishStatus PublishStatusEnum @default(PRIVATE)
+  forSale       ShopItemForSale?
+  forRent       ShopItemForRent?
+
+  @@index([moduleId])
+  @@index([date])
+  @@index([creatorId])
+  @@index([ownerId])
+}
+
+enum ExamTypeEnum {
+  QUIZ
+  MIDTERM
+  FINAL
+  PRACTICE
+}
+
+model ExamExercise {
+  examId     String
+  exam       Exam     @relation(fields: [examId], references: [id])
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  order      Int
+
+  @@id([examId, exerciseId])
+  @@index([examId, order])
+}
+
+model Material {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  url         String?
+  type        MaterialType
+  courseId    String?
+  course      Course?      @relation(fields: [courseId], references: [id])
+  moduleId    String?
+  module      Module?      @relation(fields: [moduleId], references: [id])
+  topicId     String?
+  topic       Topic?       @relation(fields: [topicId], references: [id])
+  comments    Comment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  creatorId   String
+  creator     Teacher      @relation("MaterialCreator", fields: [creatorId], references: [id])
+  ownerId     String
+  owner       Teacher      @relation("MaterialOwner", fields: [ownerId], references: [id])
+
+  publishStatus PublishStatusEnum @default(PRIVATE)
+  forSale       ShopItemForSale?
+  forRent       ShopItemForRent?
+
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([topicId])
+}
+
+enum MaterialType {
+  DOCUMENT
+  VIDEO
+  AUDIO
+  LINK
+  OTHER
+}
+
+model Comment {
+  id           String      @id @default(cuid())
+  content      String
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  courseId     String?
+  course       Course?     @relation(fields: [courseId], references: [id])
+  moduleId     String?
+  module       Module?     @relation(fields: [moduleId], references: [id])
+  topicId      String?
+  topic        Topic?      @relation(fields: [topicId], references: [id])
+  materialId   String?
+  material     Material?   @relation(fields: [materialId], references: [id])
+  enrollmentId String?
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id])
+  classId      String?
+  class        Class?      @relation(fields: [classId], references: [id])
+  teamId       String?
+  team         Team?       @relation(fields: [teamId], references: [id])
+  eventId      String?
+  event        Event?      @relation(fields: [eventId], references: [id])
+  lessonId     String?
+  lesson       Lesson?     @relation(fields: [lessonId], references: [id])
+  examId       String?
+  exam         Exam?       @relation(fields: [examId], references: [id])
+  exerciseId   String?
+  exercise     Exercise?   @relation(fields: [exerciseId], references: [id])
+  studentId    String?
+  student      Student?    @relation(fields: [studentId], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([topicId])
+}
+
+enum EnrollmentStatusEnum {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Enrollment {
+  id         String               @id @default(cuid())
+  courseId   String
+  course     Course               @relation(fields: [courseId], references: [id])
+  classId    String
+  class      Class                @relation(fields: [classId], references: [id])
+  status     EnrollmentStatusEnum @default(PENDING)
+  startDate  DateTime
+  endDate    DateTime
+  totalPrice Int?
+  currency   CurrencyTypeEnum     @default(EUR)
+  teacherId  String?
+  teacher    Teacher?             @relation(fields: [teacherId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  holidays  Holiday[]
+  comments  Comment[]
+
+  @@unique([courseId, classId])
+  @@index([courseId])
+  @@index([classId])
+}
+
+model Class {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  courseId    String
+  course      Course       @relation(fields: [courseId], references: [id])
+  teacherId   String?
+  teacher     Teacher?     @relation(fields: [teacherId], references: [id])
+  students    Student[]
+  teams       Team[]
+  enrollments Enrollment[]
+  comments    Comment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model Holiday {
+  id           String     @id @default(cuid())
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([enrollmentId])
+  @@index([startDate, endDate])
+}
+
+model LessonSchedule {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  dateTime  DateTime
+  duration  Int // Duration in minutes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teacherId String?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+
+  @@index([lessonId])
+  @@index([dateTime])
+}
+
+enum EventTypeEnum {
+  MEETING
+  PROJECT
+  OTHER
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  type        EventTypeEnum
+  courseId    String?
+  course      Course?       @relation(fields: [courseId], references: [id])
+  moduleId    String?
+  module      Module?       @relation(fields: [moduleId], references: [id])
+  comments    Comment[]
+  creatorId   String
+  creator     Teacher       @relation("EventCreator", fields: [creatorId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([creatorId])
+  @@index([startTime, endTime])
+}
+
+model Team {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  classId     String
+  class       Class      @relation(fields: [classId], references: [id])
+  students    Student[]
+  exercises   Exercise[]
+  comments    Comment[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  teacherId   String?
+  teacher     Teacher?   @relation(fields: [teacherId], references: [id])
+
+  @@index([classId])
+}
+
+model Client {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  creatorId   String
+  creator     Teacher    @relation(fields: [creatorId], references: [id])
+  exercises   Exercise[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([creatorId])
+}
+
+enum NotificationTypeEnum {
+  CREATED
+  UPDATED
+  DELETED
+  CLASS_STARTED
+  CLASS_ENDED
+  ENROLLMENT
+  OTHER
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  title     String?
+  message   String?
+  type      NotificationTypeEnum
+  teacherId String?
+  teacher   Teacher?             @relation(fields: [teacherId], references: [id])
+  studentId String?
+  student   Student?             @relation(fields: [studentId], references: [id])
+  seen      Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([type])
+  @@index([teacherId])
+  @@index([studentId])
+  @@index([seen])
+}
+
+enum CurrencyTypeEnum {
+  USD
+  EUR
+  GBP
+}
+
+enum PublishStatusEnum {
+  PRIVATE
+  PUBLISHED_FOR_SALE
+  PUBLISHED_FOR_RENT
+  PUBLISHED_FOR_BOTH
+}
+
+enum ShopItemTypeEnum {
+  COURSE
+  MODULE
+  EXERCISE
+  EXAM
+  MATERIAL
+}
+
+model ShopItemForSale {
+  id        String           @id @default(cuid())
+  itemType  ShopItemTypeEnum
+  itemId    String           @unique
+  sellPrice Int
+  currency  CurrencyTypeEnum @default(EUR)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @default(now())
+
+  course    Course?         @relation(fields: [itemId], references: [id], map: "ShopItemForSale_course_fkey")
+  module    Module?         @relation(fields: [itemId], references: [id], map: "ShopItemForSale_module_fkey")
+  exercise  Exercise?       @relation(fields: [itemId], references: [id], map: "ShopItemForSale_exercise_fkey")
+  exam      Exam?           @relation(fields: [itemId], references: [id], map: "ShopItemForSale_exam_fkey")
+  material  Material?       @relation(fields: [itemId], references: [id], map: "ShopItemForSale_material_fkey")
+  purchases PurchasedItem[]
+
+  @@unique([itemType, itemId])
+  @@index([itemType, itemId])
+}
+
+model ShopItemForRent {
+  id         String           @id @default(cuid())
+  itemType   ShopItemTypeEnum
+  itemId     String           @unique
+  rentPrice  Int
+  rentPeriod Int // Default rental period in days
+  currency   CurrencyTypeEnum @default(EUR)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @default(now())
+
+  course   Course?   @relation(fields: [itemId], references: [id], map: "ShopItemForRent_course_fkey")
+  module   Module?   @relation(fields: [itemId], references: [id], map: "ShopItemForRent_module_fkey")
+  exercise Exercise? @relation(fields: [itemId], references: [id], map: "ShopItemForRent_exercise_fkey")
+  exam     Exam?     @relation(fields: [itemId], references: [id], map: "ShopItemForRent_exam_fkey")
+  material Material? @relation(fields: [itemId], references: [id], map: "ShopItemForRent_material_fkey")
+
+  rentalPeriods RentalPeriod[]
+  isVisible     Boolean        @default(false)
+
+  @@unique([itemType, itemId])
+  @@index([itemType, itemId])
+  @@index([isVisible])
+}
+
+model PurchasedItem {
+  id           String          @id @default(cuid())
+  teacherId    String
+  teacher      Teacher         @relation(fields: [teacherId], references: [id])
+  shopItemId   String
+  shopItem     ShopItemForSale @relation(fields: [shopItemId], references: [id])
+  purchaseDate DateTime
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([teacherId, shopItemId])
+}
+
+model RentalPeriod {
+  id            String          @id @default(cuid())
+  teacherId     String
+  teacher       Teacher         @relation(fields: [teacherId], references: [id])
+  shopItemId    String
+  shopItem      ShopItemForRent @relation(fields: [shopItemId], references: [id])
+  rentStartDate DateTime
+  rentEndDate   DateTime
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  isActive      Boolean         @default(true)
+
+  @@index([teacherId, shopItemId])
+  @@index([rentStartDate, rentEndDate])
+  @@index([isActive])
+}

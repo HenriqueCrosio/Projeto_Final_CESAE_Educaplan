@@ -1,0 +1,159 @@
+[
+    {
+      "id": "topic-001",
+      "name": "Introdução à Programação em Python",
+      "slug": "introducao-a-programacao-em-python",
+      "description": "Uma visão geral dos conceitos básicos de programação usando Python.",
+      "category": "Programação",
+      "objectives": [
+        {
+          "id": "obj-001",
+          "description": "Entender os conceitos básicos de programação",
+          "createdAt": "2023-01-01T10:00:00Z",
+          "updatedAt": "2023-01-01T10:00:00Z"
+        },
+        {
+          "id": "obj-002",
+          "description": "Aprender a sintaxe básica de Python",
+          "createdAt": "2023-01-01T10:05:00Z",
+          "updatedAt": "2023-01-01T10:05:00Z"
+        },
+        {
+          "id": "obj-003",
+          "description": "Criar programas simples em Python",
+          "createdAt": "2023-01-01T10:10:00Z",
+          "updatedAt": "2023-01-01T10:10:00Z"
+        }
+      ],
+      "creatorId": "cm6bntysq0005s911c7r7o87g",
+      "ownedId": ["cm6bntysq0005s911c7r7o87g"],
+      "ownerId": ["cm6bntysq0005s911c7r7o87g"],
+      "publishStatus": "PUBLISHED_FOR_SALE"
+    },
+    {
+      "id": "topic-002",
+      "name": "Marketing Digital Avançado",
+      "slug": "marketing-digital-avancado",
+      "description": "Estratégias avançadas de marketing digital para profissionais.",
+      "category": "Marketing",
+      "objectives": [
+        {
+          "id": "obj-004",
+          "description": "Dominar técnicas avançadas de SEO",
+          "createdAt": "2023-02-15T14:00:00Z",
+          "updatedAt": "2023-02-15T14:00:00Z"
+        },
+        {
+          "id": "obj-005",
+          "description": "Criar campanhas eficazes de marketing de conteúdo",
+          "createdAt": "2023-02-15T14:05:00Z",
+          "updatedAt": "2023-02-15T14:05:00Z"
+        },
+        {
+          "id": "obj-006",
+          "description": "Analisar métricas de marketing digital",
+          "createdAt": "2023-02-15T14:10:00Z",
+          "updatedAt": "2023-02-15T14:10:00Z"
+        }
+      ],
+      "creatorId": "cm6bntysq0005s911c7r7o87g",
+      "ownedId": ["cm6bntysq0005s911c7r7o87g"],
+      "ownerId": ["cm6bntysq0005s911c7r7o87g"],
+      "publishStatus": "PUBLISHED_FOR_RENT"
+    },
+    {
+      "id": "topic-003",
+      "name": "Gestão Ágil de Projetos",
+      "slug": "gestao-agil-de-projetos",
+      "description": "Metodologias ágeis para gerenciamento eficiente de projetos.",
+      "category": "Gestão",
+      "objectives": [
+        {
+          "id": "obj-007",
+          "description": "Compreender os princípios do Manifesto Ágil",
+          "createdAt": "2023-03-10T09:00:00Z",
+          "updatedAt": "2023-03-10T09:00:00Z"
+        },
+        {
+          "id": "obj-008",
+          "description": "Aplicar o framework Scrum em projetos",
+          "createdAt": "2023-03-10T09:05:00Z",
+          "updatedAt": "2023-03-10T09:05:00Z"
+        },
+        {
+          "id": "obj-009",
+          "description": "Implementar práticas Kanban para melhoria contínua",
+          "createdAt": "2023-03-10T09:10:00Z",
+          "updatedAt": "2023-03-10T09:10:00Z"
+        }
+      ],
+      "creatorId": "cm6bntysq0005s911c7r7o87g",
+      "ownedId": ["cm6bntysq0005s911c7r7o87g"],
+      "ownerId": ["cm6bntysq0005s911c7r7o87g"],
+      "publishStatus": "PUBLISHED_FOR_BOTH"
+    },
+    {
+      "id": "topic-004",
+      "name": "Inteligência Artificial para Iniciantes",
+      "slug": "inteligencia-artificial-para-iniciantes",
+      "description": "Introdução aos conceitos fundamentais de IA e suas aplicações.",
+      "category": "Tecnologia",
+      "objectives": [
+        {
+          "id": "obj-010",
+          "description": "Entender os conceitos básicos de IA",
+          "createdAt": "2023-04-05T11:00:00Z",
+          "updatedAt": "2023-04-05T11:00:00Z"
+        },
+        {
+          "id": "obj-011",
+          "description": "Explorar diferentes tipos de algoritmos de aprendizado de máquina",
+          "createdAt": "2023-04-05T11:05:00Z",
+          "updatedAt": "2023-04-05T11:05:00Z"
+        },
+        {
+          "id": "obj-012",
+          "description": "Implementar um projeto simples de IA",
+          "createdAt": "2023-04-05T11:10:00Z",
+          "updatedAt": "2023-04-05T11:10:00Z"
+        }
+      ],
+      "creatorId": "cm6bntysq0005s911c7r7o87g",
+      "ownedId": ["cm6bntysq0005s911c7r7o87g"],
+      "ownerId": ["cm6bntysq0005s911c7r7o87g"],
+      "publishStatus": "PRIVATE"
+    },
+    {
+      "id": "topic-005",
+      "name": "Design UX/UI Avançado",
+      "slug": "design-ux-ui-avancado",
+      "description": "Técnicas avançadas de design de experiência do usuário e interface.",
+      "category": "Design",
+      "objectives": [
+        {
+          "id": "obj-013",
+          "description": "Aplicar princípios avançados de design de interação",
+          "createdAt": "2023-05-20T13:00:00Z",
+          "updatedAt": "2023-05-20T13:00:00Z"
+        },
+        {
+          "id": "obj-014",
+          "description": "Criar protótipos de alta fidelidade",
+          "createdAt": "2023-05-20T13:05:00Z",
+          "updatedAt": "2023-05-20T13:05:00Z"
+        },
+        {
+          "id": "obj-015",
+          "description": "Conduzir testes de usabilidade eficazes",
+          "createdAt": "2023-05-20T13:10:00Z",
+          "updatedAt": "2023-05-20T13:10:00Z"
+        }
+      ],
+      "creatorId": "cm6bntysq0005s911c7r7o87g",
+      "ownedId": ["cm6bntysq0005s911c7r7o87g"],
+      "ownerId": ["cm6bntysq0005s911c7r7o87g"],
+      "publishStatus": "PUBLISHED_FOR_SALE"
+    }
+  ]
+  
+  

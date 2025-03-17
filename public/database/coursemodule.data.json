@@ -1,0 +1,42 @@
+[
+    {
+      "id": "cm-001",
+      "courseId": "course-001",
+      "moduleId": "module-001",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-06-01T10:00:00Z",
+      "updatedAt": "2023-06-01T10:00:00Z"
+    },
+    {
+      "id": "cm-002",
+      "courseId": "course-001",
+      "moduleId": "module-002",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-06-01T10:00:00Z",
+      "updatedAt": "2023-06-01T10:00:00Z"
+    },
+    {
+      "id": "cm-003",
+      "courseId": "course-002",
+      "moduleId": "module-003",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-05-15T14:30:00Z",
+      "updatedAt": "2023-05-15T14:30:00Z"
+    },
+    {
+      "id": "cm-004",
+      "courseId": "course-003",
+      "moduleId": "module-004",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-06-20T08:15:00Z",
+      "updatedAt": "2023-06-20T08:15:00Z"
+    },
+    {
+      "id": "cm-005",
+      "courseId": "course-004",
+      "moduleId": "module-005",
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T09:00:00Z",
+      "updatedAt": "2023-07-01T09:00:00Z"
+    }
+  ]

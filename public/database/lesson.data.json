@@ -1,0 +1,57 @@
+[
+    {
+      "id": "lesson-001",
+      "name": "Introdução ao HTML",
+      "description": "Aprenda os fundamentos do HTML e estrutura básica de uma página web.",
+      "duration": 30,
+      "order": 1,
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T10:30:00Z",
+      "updatedAt": "2023-07-01T10:30:00Z"
+    },
+    {
+      "id": "lesson-002",
+      "name": "Estilização com CSS",
+      "description": "Explore os conceitos básicos de CSS para estilizar suas páginas web.",
+      "duration": 45,
+      "order": 2,
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T11:15:00Z",
+      "updatedAt": "2023-07-01T11:15:00Z"
+    },
+    {
+      "id": "lesson-003",
+      "name": "JavaScript Básico",
+      "description": "Introdução à programação com JavaScript para web.",
+      "duration": 60,
+      "order": 3,
+      "lectured": false,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-01T13:00:00Z",
+      "updatedAt": "2023-07-01T13:00:00Z"
+    },
+    {
+      "id": "lesson-004",
+      "name": "Componentes React",
+      "description": "Aprenda a criar e utilizar componentes no React.",
+      "duration": 45,
+      "order": 1,
+      "lectured": true,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-15T15:00:00Z",
+      "updatedAt": "2023-07-15T15:00:00Z"
+    },
+    {
+      "id": "lesson-005",
+      "name": "Estado e Props no React",
+      "description": "Entenda como gerenciar estado e passar props entre componentes.",
+      "duration": 60,
+      "order": 2,
+      "lectured": false,
+      "teacherId": "cm6bntysq0005s911c7r7o87g",
+      "createdAt": "2023-07-16T10:00:00Z",
+      "updatedAt": "2023-07-16T10:00:00Z"
+    }
+  ]

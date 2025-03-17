@@ -1,0 +1,18 @@
+[
+    {
+      "id": "role-001",
+      "name": "admin",
+      "description": "Administrador do sistema"
+    },
+    {
+      "id": "role-002",
+      "name": "teacher",
+      "description": "Professor com permissões para criar e gerir cursos"
+    },
+    {
+      "id": "role-003",
+      "name": "student",
+      "description": "Utilizador com acesso aos cursos"
+    }
+  ]
+  
