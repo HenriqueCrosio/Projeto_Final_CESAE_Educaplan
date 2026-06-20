@@ -87,8 +87,8 @@ getGestaoGroups: async (): Promise<NavGroup[]> => {
 
 
   getCursosGroups: async (): Promise<NavGroup[]> => {
-    const courses: Course[] = courseService.getCoursesByTeacher()
-    const coursesByCategory = courses.reduce((acc: Record<string, Course[]>, course: Course) => {
+    const courses = await courseService.getCoursesByTeacher()
+    const coursesByCategory = courses.reduce((acc: Record<string, typeof courses>, course) => {
       if (!acc[course.category]) {
         acc[course.category] = [];
       }

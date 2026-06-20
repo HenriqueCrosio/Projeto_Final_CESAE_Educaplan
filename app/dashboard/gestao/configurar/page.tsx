@@ -39,8 +39,11 @@ const EnrollmentPage = () => {
   const [totalPrice, setTotalPrice] = useState(0);
 
   useEffect(() => {
-    const teacherCourses = courseService.getCoursesByTeacher();
-    setCourses(teacherCourses);
+    const fetchCourses = async () => {
+      const teacherCourses = await courseService.getCoursesByTeacher();
+      setCourses(teacherCourses);
+    };
+    fetchCourses();
   }, []);
 
   useEffect(() => {

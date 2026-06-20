@@ -7,7 +7,7 @@ import { courseService } from "@/services/data-services/course.service"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Course } from "@/types/interfaces"
+import type { Course } from "@prisma/client"
 import { normalize } from "@/lib/utils/validation.utils"
 
 export default function CoursesPage() {
@@ -18,9 +18,9 @@ export default function CoursesPage() {
   const searchQuery = searchParams.get("q") || ""
 
   useEffect(() => {
-    const fetchCourses = () => {
+    const fetchCourses = async () => {
       try {
-        const ownCourses = courseService.getCoursesByTeacher()
+        const ownCourses = await courseService.getCoursesByTeacher()
         setCourses(ownCourses)
         setFilteredCourses(ownCourses)
       } finally {

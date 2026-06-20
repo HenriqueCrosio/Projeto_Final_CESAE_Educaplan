@@ -7,7 +7,8 @@ import { courseModuleService } from "@/services/data-services/course-module.serv
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Course, Module, Topic, Lesson } from "@/types/interfaces"
+import type { Module, Topic, Lesson } from "@/types/interfaces"
+import type { Course } from "@prisma/client"
 import { normalize } from "@/lib/utils/validation.utils"
 import { minutesToHours } from "@/lib/utils"
 
@@ -31,7 +32,7 @@ export default function CourseDetailPage() {
     const fetchCourse = async () => {
       setIsLoading(true)
       try {
-        const fetchedCourse = courseService.getCourseBySlug(slug)
+        const fetchedCourse = await courseService.getCourseBySlug(slug)
         if (fetchedCourse) {
           const extendedCourse: ExtendedCourse = {
             ...fetchedCourse,

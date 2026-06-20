@@ -38,8 +38,11 @@ export default function CreateCoursePage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    const cats = courseService.getCategories()
-    setCategories(cats)
+    const fetchCategories = async () => {
+      const cats = await courseService.getCategories()
+      setCategories(cats)
+    }
+    fetchCategories()
   }, [])
 
   const computedTotalMinutes = availableModules
@@ -58,15 +61,10 @@ export default function CreateCoursePage() {
 
     const finalCategory = addNewCategory && newCategory.trim().length > 0 ? newCategory : category
 
-    const teacherId = courseService.getTeacherId()
-
     const courseData = {
       name,
       description,
       category: finalCategory,
-      totalMinutes: computedTotalMinutes > 0 ? computedTotalMinutes : undefined,
-      ownedId: [teacherId],
-      ownerId: [teacherId],
     }
 
     const result = await courseWrapperService.createCourseWithModules(courseData, selectedModuleIds)
