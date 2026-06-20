@@ -1,12 +1,31 @@
-import { generateId } from "@/lib/utils/general.utils"
-import { useCentralStore } from "@/store/central.store"
 import { NotificationService as n } from "@/services/data-services/notification.service"
-import { generateSlug, handleServiceErrorWithToast } from "@/lib/utils"
-import { CourseStatusEnum, type Lesson } from "@/types/interfaces"
+import { handleServiceErrorWithToast } from "@/lib/utils"
+import {
+  createLesson,
+  updateLesson as updateLessonAction,
+  getMyLessons,
+  deleteLesson as deleteLessonAction,
+  type CreateLessonInput,
+} from "@/actions/lesson.actions"
+import type { Lesson as PrismaLesson, Topic, CourseStatusEnum } from "@prisma/client"
 
+export type LessonWithTopics = PrismaLesson & { topics: Topic[] }
+
+type UpdateLessonInput = {
+  name?: string
+  description?: string | null
+  duration?: number
+  order?: number
+  status?: CourseStatusEnum
+  topicIds?: string[]
+}
+
+/**
+ * LessonService: fonte da verdade = Postgres. Uma aula pertence a um módulo (Opção A)
+ * e pode cobrir vários tópicos (M:N Lesson↔Topic).
+ */
 class LessonService {
   private static instance: LessonService | null = null
-  private teacherId = "cm6bntysq0005s911c7r7o87g" // Hardcoded teacher ID for testing
 
   private constructor() {}
 
@@ -17,102 +36,42 @@ class LessonService {
     return LessonService.instance
   }
 
-  public getTeacherId(): string {
-    return this.teacherId
-  }
-
-  useLessons = () => useCentralStore((state) => state.getData("lessons") || [])
-
-  /**
-   * ✅ Adds a new lesson (CRUD).
-   * @param lesson - Lesson data.
-   * @returns Success or failure message.
-   */
-  async addLesson(lesson: Omit<Lesson, "id" | "slug" | "createdAt" | "status" | "updatedAt" | "teacherId">): Promise<{ success: boolean; message: string; lesson?: Lesson }> {
+  async addLesson(
+    lesson: CreateLessonInput
+  ): Promise<{ success: boolean; message: string; lesson?: LessonWithTopics }> {
     try {
-      const state = useCentralStore.getState()
-      const teacherId = this.getTeacherId()
-
-      if (!lesson.name || lesson.order === undefined) {
-        throw new Error("Por favor, preencha todos os campos obrigatórios.")
-      }
-
-      const slug = generateSlug(lesson.name, "lesson")
-
-      const newLesson: Lesson = {
-        ...lesson,
-        id: generateId(),
-        slug,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        teacherId,
-        status: CourseStatusEnum.DRAFT,
-      }
-
-      state.addData("lessons", newLesson)
-
+      const created = await createLesson(lesson)
       n.addNotification("success", "Aula criada com sucesso.")
-      return { success: true, message: "Aula criada com sucesso.", lesson: newLesson }
+      return { success: true, message: "Aula criada com sucesso.", lesson: created }
     } catch (error) {
       handleServiceErrorWithToast(error, "Falha ao criar a aula")
       return { success: false, message: "Falha ao criar a aula" }
     }
   }
 
-  /**
-   * ✅ Updates an existing lesson (CRUD).
-   * @param lessonId - The lesson ID.
-   * @param updates - Lesson updates.
-   * @returns Success or failure message.
-   */
-  async updateLesson(lessonId: string, updates: Partial<Lesson>): Promise<{ success: boolean; message: string; lesson?: Lesson }> {
+  async updateLesson(
+    lessonId: string,
+    updates: UpdateLessonInput
+  ): Promise<{ success: boolean; message: string }> {
     try {
-      const state = useCentralStore.getState()
-      const lessons = state.getData("lessons") || []
-      const teacherId = this.getTeacherId()
-
-      const lessonData = lessons.find((l) => l.id === lessonId)
-      if (!lessonData) {
-        throw new Error("Aula não encontrada. Atualização cancelada.")
+      const result = await updateLessonAction(lessonId, updates)
+      if (result.count === 0) {
+        throw new Error("Aula não encontrada ou sem permissão para atualizar.")
       }
-
-      if (lessonData.teacherId !== teacherId) {
-        throw new Error("Você não tem permissão para atualizar esta aula.")
-      }
-
-      const updatedLesson = { ...lessonData, ...updates, updatedAt: new Date() }
-      state.updateData("lessons", lessonId, updatedLesson)
-
       n.addNotification("success", "Aula atualizada com sucesso.")
-      return { success: true, message: "Aula atualizada com sucesso.", lesson: updatedLesson }
+      return { success: true, message: "Aula atualizada com sucesso." }
     } catch (error) {
       handleServiceErrorWithToast(error, "Falha ao atualizar a aula")
       return { success: false, message: "Falha ao atualizar a aula" }
     }
   }
 
-  /**
-   * ✅ Deletes a lesson (CRUD).
-   * @param lessonId - The lesson ID.
-   * @returns Success or failure message.
-   */
   async deleteLesson(lessonId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const state = useCentralStore.getState()
-      const lessons = state.getData("lessons") || []
-      const teacherId = this.getTeacherId()
-
-      const lessonData = lessons.find((l) => l.id === lessonId)
-      if (!lessonData) {
-        throw new Error("Aula não encontrada. Exclusão cancelada.")
+      const result = await deleteLessonAction(lessonId)
+      if (result.count === 0) {
+        throw new Error("Aula não encontrada ou sem permissão para excluir.")
       }
-
-      if (lessonData.teacherId !== teacherId) {
-        throw new Error("Você não tem permissão para excluir esta aula.")
-      }
-
-      state.deleteData("lessons", lessonId)
-
       n.addNotification("success", "Aula excluída com sucesso.")
       return { success: true, message: "Aula excluída com sucesso." }
     } catch (error) {
@@ -121,52 +80,12 @@ class LessonService {
     }
   }
 
-  /**
-   * ✅ Retrieves a lesson by its ID.
-   * @param lessonId - The lesson ID.
-   * @returns Lesson object or null.
-   */
-  getLessonById(lessonId: string): Lesson | null {
+  async getLessonsByTeacher(): Promise<{ id: string }[]> {
     try {
-      const state = useCentralStore.getState()
-      const lessons = state.getData("lessons") || []
-      return lessons.find((l) => l.id === lessonId) || null
-    } catch (error) {
-      handleServiceErrorWithToast(error, "Falha ao recuperar a aula")
-      return null
-    }
-  }
-
-  /**
-   * ✅ Retrieves all lessons created by the teacher.
-   * @returns List of lessons.
-   */
-  getLessonsByTeacher(): Lesson[] {
-    try {
-      const teacherId = this.getTeacherId()
-      const state = useCentralStore.getState()
-      const lessons = state.getData("lessons") || []
-
-      return lessons.filter((lesson) => lesson.teacherId === teacherId)
+      return await getMyLessons()
     } catch (error) {
       handleServiceErrorWithToast(error, "Falha ao recuperar as aulas do professor")
       return []
-    }
-  }
-
-  /**
-   * ✅ Retrieves a lesson by slug.
-   * @param slug - The lesson slug.
-   * @returns Lesson object or null.
-   */
-  getLessonBySlug(slug: string): Lesson | null {
-    try {
-      const state = useCentralStore.getState()
-      const lessons = state.getData("lessons") || []
-      return lessons.find((l) => l.slug === slug) || null
-    } catch (error) {
-      handleServiceErrorWithToast(error, "Falha ao recuperar a aula")
-      return null
     }
   }
 }

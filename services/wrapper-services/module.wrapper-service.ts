@@ -1,6 +1,8 @@
 import { handleServiceErrorWithToast } from "@/lib/utils"
 import { moduleService } from "@/services/data-services/module.service"
 import { topicService, type TopicWithObjectives } from "@/services/data-services/topic.service"
+import { moduleLessonService } from "@/services/data-services/module-lesson.service"
+import type { LessonWithTopics } from "@/services/data-services/lesson.service"
 import type { CreateModuleInput } from "@/actions/module.actions"
 import type { Module } from "@prisma/client"
 
@@ -64,15 +66,17 @@ class ModuleWrapperService {
 
   async getModuleWithTopicsAndLessons(
     slug: string
-  ): Promise<(Module & { topics: TopicWithObjectives[]; lessons: never[] }) | null> {
+  ): Promise<(Module & { topics: TopicWithObjectives[]; lessons: LessonWithTopics[] }) | null> {
     try {
       const moduleData = await moduleService.getModuleBySlug(slug)
       if (!moduleData) {
         throw new Error("Módulo não encontrado.")
       }
-      const topics = await topicService.getTopicsForModule(moduleData.id)
-      // Aulas (Lesson) ainda não migradas.
-      return { ...moduleData, topics, lessons: [] }
+      const [topics, lessons] = await Promise.all([
+        topicService.getTopicsForModule(moduleData.id),
+        moduleLessonService.getLessonsForModule(moduleData.id),
+      ])
+      return { ...moduleData, topics, lessons }
     } catch (error) {
       handleServiceErrorWithToast(error, "Erro ao recuperar módulo")
       return null
