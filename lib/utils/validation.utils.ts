@@ -35,7 +35,7 @@ export function generateSlug(name: string, contentType: ContentType): string {
 }
 
 
-export const formatCurrency = (cents: number): string => (cents / 100).toFixed(2) + " €"
+// formatCurrency vive em general.utils (era duplicado idêntico aqui)
 
 export const generateClassName = (index: number): string => {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
