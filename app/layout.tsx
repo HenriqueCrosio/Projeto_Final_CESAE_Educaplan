@@ -20,6 +20,10 @@ const geistMono = localFont({
 
 export const metadata = siteMetadata;
 
+// App autenticado: as páginas dependem da sessão Auth0/estado de runtime,
+// então não devem ser pré-renderizadas estaticamente no build.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@auth0/nextjs-auth0";
 
+// Lê cookies da sessão Auth0 → não pode ser renderizada estaticamente.
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const session = await getSession();
