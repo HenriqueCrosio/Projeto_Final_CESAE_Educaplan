@@ -7,10 +7,9 @@ import { courseModuleService } from "@/services/data-services/course-module.serv
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Module, Topic, Lesson } from "@/types/interfaces"
-import type { Course } from "@prisma/client"
+import type { Topic, Lesson } from "@/types/interfaces"
+import type { Course, Module } from "@prisma/client"
 import { normalize } from "@/lib/utils/validation.utils"
-import { minutesToHours } from "@/lib/utils"
 
 interface ExtendedModule extends Module {
   topics: Topic[]
@@ -40,7 +39,7 @@ export default function CourseDetailPage() {
           }
           setCourse(extendedCourse)
 
-          const fetchedModules = courseModuleService.getModulesForCourse(fetchedCourse.id)
+          const fetchedModules = await courseModuleService.getModulesForCourse(fetchedCourse.id)
           const extendedModules: ExtendedModule[] = fetchedModules.map((module) => ({
             ...module,
             topics: [],
@@ -143,11 +142,11 @@ export default function CourseDetailPage() {
                 <div className="flex justify-between text-sm mt-auto">
                   <div>
                     <p className="font-semibold">Total de horas</p>
-                    <p>{minutesToHours(module.totalMinutes).toFixed(2)} horas</p>
+                    <p>{module.totalHours} horas</p>
                   </div>
                   <div>
                     <p className="font-semibold">Média por aula</p>
-                    <p>{minutesToHours(module.averageMinutesPerLesson).toFixed(2)} horas</p>
+                    <p>{module.averageHoursPerLesson.toFixed(2)} horas</p>
                   </div>
                 </div>
               </CardContent>

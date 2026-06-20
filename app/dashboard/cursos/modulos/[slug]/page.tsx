@@ -5,7 +5,8 @@ import { useParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Module, Topic, Lesson } from "@/types/interfaces"
+import type { Topic, Lesson } from "@/types/interfaces"
+import type { Module } from "@prisma/client"
 import { normalize } from "@/lib/utils/validation.utils"
 import { moduleWrapperService } from "@/services/wrapper-services/module.wrapper-service"
 
@@ -25,7 +26,7 @@ export default function ModuleDetailPage() {
       setIsLoading(true)
       try {
         // Utilizar a função que retorna o módulo com tópicos e aulas
-        const fetchedModule = moduleWrapperService.getModuleWithTopicsAndLessons(slug)
+        const fetchedModule = await moduleWrapperService.getModuleWithTopicsAndLessons(slug)
         if (fetchedModule) {
           setModuleWithDetails(fetchedModule)
         } else {
@@ -79,9 +80,9 @@ export default function ModuleDetailPage() {
           <p className="text-sm text-gray-500 mb-4">{moduleWithDetails.description}</p>
           <h4 className="text-sm font-semibold mt-4 mb-1">Detalhes:</h4>
           <ul className="text-xs text-gray-600 list-disc list-inside">
-            <li className="ml-6">Total de Minutos: {moduleWithDetails.totalMinutes}</li>
-            {moduleWithDetails.averageMinutesPerLesson && (
-              <li className="ml-6">Média de Minutos por Aula: {moduleWithDetails.averageMinutesPerLesson}</li>
+            <li className="ml-6">Total de Horas: {moduleWithDetails.totalHours}</li>
+            {moduleWithDetails.averageHoursPerLesson > 0 && (
+              <li className="ml-6">Média de Horas por Aula: {moduleWithDetails.averageHoursPerLesson}</li>
             )}
             <li className="ml-6">Criado: {new Date(moduleWithDetails.createdAt).toLocaleDateString()}</li>
             <li className="ml-6">Atualizado: {new Date(moduleWithDetails.updatedAt).toLocaleDateString()}</li>

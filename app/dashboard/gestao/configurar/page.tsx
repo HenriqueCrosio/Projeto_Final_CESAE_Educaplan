@@ -48,17 +48,20 @@ const EnrollmentPage = () => {
 
   useEffect(() => {
     if (selectedCourseId) {
-      const courseDetails = courseWrapperService.getCourseWithModules(selectedCourseId);
-      if (courseDetails) {
-        setSelectedCourse(courseDetails);
-        setEnrollmentName(generateEnrollmentName(courseDetails.name));
-        setModules(courseDetails.modules || []);
-        const defaultPrices: { [moduleId: string]: number } = {};
-        courseDetails.modules?.forEach((mod: any) => {
-          defaultPrices[mod.id] = 0;
-        });
-        setModulePrices(defaultPrices);
-      }
+      const fetchCourseDetails = async () => {
+        const courseDetails = await courseWrapperService.getCourseWithModules(selectedCourseId);
+        if (courseDetails) {
+          setSelectedCourse(courseDetails);
+          setEnrollmentName(generateEnrollmentName(courseDetails.name));
+          setModules(courseDetails.modules || []);
+          const defaultPrices: { [moduleId: string]: number } = {};
+          courseDetails.modules?.forEach((mod: any) => {
+            defaultPrices[mod.id] = 0;
+          });
+          setModulePrices(defaultPrices);
+        }
+      };
+      fetchCourseDetails();
       const allClasses = classService.getClassesByTeacher();
       setClasses(allClasses);
       setSelectedClassIds([]);

@@ -1,30 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import type React from "react"
 import { useState, useEffect } from "react"
 import { courseService } from "@/services/data-services/course.service"
-import { moduleService } from "@/services/data-services/module.service"
 import { courseWrapperService } from "@/services/wrapper-services/course.wrapper-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { minutesToHours } from "@/lib/utils"
-
-const formatDuration = (minutes: number): string => {
-  const hours = minutesToHours(minutes)
-  const hrs = Math.floor(hours)
-  const mins = Math.round((hours - hrs) * 60)
-  if (hrs > 0 && mins > 0) {
-    return `${hrs} ${hrs === 1 ? "hora" : "horas"} e ${mins} ${mins === 1 ? "minuto" : "minutos"}`
-  } else if (hrs > 0) {
-    return `${hrs} ${hrs === 1 ? "hora" : "horas"}`
-  } else {
-    return `${mins} ${mins === 1 ? "minuto" : "minutos"}`
-  }
-}
 
 export default function CreateCoursePage() {
   const [name, setName] = useState("")
@@ -33,8 +16,6 @@ export default function CreateCoursePage() {
   const [categories, setCategories] = useState<string[]>([])
   const [addNewCategory, setAddNewCategory] = useState(false)
   const [newCategory, setNewCategory] = useState("")
-  const availableModules = moduleService.useModules()
-  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -44,16 +25,6 @@ export default function CreateCoursePage() {
     }
     fetchCategories()
   }, [])
-
-  const computedTotalMinutes = availableModules
-    .filter((mod: any) => selectedModuleIds.includes(mod.id))
-    .reduce((acc: number, mod: any) => acc + mod.totalMinutes, 0)
-
-  const toggleModule = (moduleId: string) => {
-    setSelectedModuleIds((prev) =>
-      prev.includes(moduleId) ? prev.filter((id) => id !== moduleId) : [...prev, moduleId],
-    )
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,14 +38,13 @@ export default function CreateCoursePage() {
       category: finalCategory,
     }
 
-    const result = await courseWrapperService.createCourseWithModules(courseData, selectedModuleIds)
+    const result = await courseWrapperService.createCourseWithModules(courseData)
     if (result.success) {
       setName("")
       setDescription("")
       setCategory("")
       setAddNewCategory(false)
       setNewCategory("")
-      setSelectedModuleIds([])
     }
     setLoading(false)
   }
@@ -149,45 +119,16 @@ export default function CreateCoursePage() {
           )}
         </div>
 
-        {computedTotalMinutes > 0 && (
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                <strong>Duração total do curso:</strong> {formatDuration(computedTotalMinutes)}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        <p className="text-sm text-muted-foreground">
+          Depois de criar o curso, adicione módulos a ele em <strong>Adicionar novo módulo</strong>.
+        </p>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Selecionar Módulos</label>
-          {availableModules.length > 0 ? (
-            <div className="flex flex-wrap gap-2 flex-grow grow-1 flex-1">
-              {availableModules.map((mod: any) => (
-                <Button
-                  key={mod.id}
-                  type="button"
-                  variant={selectedModuleIds.includes(mod.id) ? "default" : "outline"}
-                  onClick={() => toggleModule(mod.id)}
-                >
-                  {mod.name} ({formatDuration(mod.totalMinutes)})
-                </Button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Não existem módulos disponíveis. Por favor, adicione módulos ao store central.
-            </p>
-          )}
-        </div>
         <div className="flex w-full justify-center">
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Adicionar Curso..." : "Criar Curso"}
           </Button>
         </div>
-
       </form>
     </div>
   )
 }
-

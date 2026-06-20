@@ -8,12 +8,14 @@ import { moduleLessonService } from "@/services/data-services/module-lesson.serv
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Module } from "@/types/interfaces"
+import type { Module } from "@prisma/client"
 import { normalize } from "@/lib/utils/validation.utils"
 
+type ModuleWithLessonCount = Module & { lessonCount: number }
+
 export default function ModulesPage() {
-  const [modules, setModules] = useState<Module[]>([])
-  const [filteredModules, setFilteredModules] = useState<Module[]>([])
+  const [modules, setModules] = useState<ModuleWithLessonCount[]>([])
+  const [filteredModules, setFilteredModules] = useState<ModuleWithLessonCount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get("q") || ""
@@ -21,7 +23,7 @@ export default function ModulesPage() {
   useEffect(() => {
     const fetchModules = async () => {
       try {
-        const ownModules = moduleService.getModulesByTeacher()
+        const ownModules = await moduleService.getModulesByTeacher()
         const modulesWithLessons = await Promise.all(
           ownModules.map(async (module) => {
             const lessons = await moduleLessonService.getLessonsForModule(module.id)
@@ -86,7 +88,7 @@ export default function ModulesPage() {
                 <CardContent className="flex-grow flex flex-col justify-between">
                   <p className="text-sm text-gray-500 mb-2 line-clamp-3">{module.description}</p>
                   <div className="flex flex-wrap gap-2 mt-auto">
-                    <Badge variant="secondary">{module.totalMinutes} minutos</Badge>
+                    <Badge variant="secondary">{module.totalHours} horas</Badge>
                     <Badge variant="outline">{module.lessonCount} aulas</Badge>
                     <Badge variant={module.publishStatus === "PUBLISHED_FOR_RENT" ? "default" : "outline"}>
                       {normalize(module.publishStatus)}

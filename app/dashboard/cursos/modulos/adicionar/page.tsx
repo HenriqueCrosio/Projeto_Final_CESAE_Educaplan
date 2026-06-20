@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { moduleWrapperService } from "@/services/wrapper-services/module.wrapper-service";
 import { moduleService } from "@/services/data-services/module.service";
+import { courseService } from "@/services/data-services/course.service";
 import { useCentralStore } from "@/store/central.store";
+import type { Course } from "@prisma/client";
 
 // Shadcn UI components (adjust the import paths as needed)
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,10 @@ const formatDuration = (minutes: number): string => {
 };
 
 const CreateModulePage: React.FC = () => {
+  // Curso-pai (Opção A: um módulo pertence a um curso)
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+
   // Basic module fields (variables in English)
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -59,10 +65,17 @@ const CreateModulePage: React.FC = () => {
     setAvailableTopics(topics);
   }, []);
 
-  // Load categories from the moduleService (getCategories is synchronous)
+  // Load categories e cursos do professor (Postgres)
   useEffect(() => {
-    const cats = moduleService.getCategories();
-    setCategories(cats);
+    const load = async () => {
+      const [cats, teacherCourses] = await Promise.all([
+        moduleService.getCategories(),
+        courseService.getCoursesByTeacher(),
+      ]);
+      setCategories(cats);
+      setCourses(teacherCourses);
+    };
+    load();
   }, []);
 
   // Calculate durations in minutes
@@ -90,17 +103,17 @@ const CreateModulePage: React.FC = () => {
     const finalCategory =
       addNewCategory && newCategory.trim().length > 0 ? newCategory : category;
 
-    // Prepare the module data (all durations are stored in minutes)
+    // Prepara os dados do módulo (Prisma armazena em horas; pertence a um curso).
     const moduleData = {
       name,
       description,
       category: finalCategory,
-      totalMinutes,
-      averageMinutesPerLesson: averageMinutes,
-      minutesToAllocate: calculatedRemainder, // Use the automatically calculated remainder
+      courseId: selectedCourseId,
+      totalHours,
+      averageHoursPerLesson: averageHours,
     };
 
-    // Call the service that creates the module, associates topics, and generates lessons.
+    // Cria o módulo (tópicos/aulas serão associados quando Topic/Lesson migrarem).
     const result = await moduleWrapperService.createModuleWithTopicsAndLessons(
       moduleData,
       selectedTopicIds
@@ -108,6 +121,7 @@ const CreateModulePage: React.FC = () => {
 
     if (result.success) {
       // Clear the fields on success
+      setSelectedCourseId("");
       setName("");
       setDescription("");
       setCategory("");
@@ -125,6 +139,30 @@ const CreateModulePage: React.FC = () => {
       <h1 className="text-lg font-bold mb-4">Configurar Módulo</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Curso-pai (Opção A) */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="course" className="font-medium">
+            Curso:
+          </label>
+          <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Selecione o curso a que o módulo pertence" />
+            </SelectTrigger>
+            <SelectContent>
+              {courses.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {courses.length === 0 && (
+            <p className="text-sm text-gray-600">
+              Crie um curso primeiro para poder adicionar módulos.
+            </p>
+          )}
+        </div>
+
         {/* Module Name */}
         <div className="flex flex-col gap-1">
           <label htmlFor="moduleName" className="font-medium">
@@ -271,7 +309,7 @@ const CreateModulePage: React.FC = () => {
 
       <Button
         type="submit"
-        disabled={loading}
+        disabled={loading || !selectedCourseId}
         className="mt-6 w-full"
         onClick={handleSubmit}
       >

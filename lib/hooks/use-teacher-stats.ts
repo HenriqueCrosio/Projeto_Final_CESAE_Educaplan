@@ -16,13 +16,14 @@ export const useTeacherStats = () => {
     const fetchStats = async () => {
       try {
         setIsLoading(true)
-        const teacherStats = await teacherDashboardService.getTeacherStats()
+        const [teacherStats, teacherModules] = await Promise.all([
+          teacherDashboardService.getTeacherStats(),
+          moduleService.getModulesByTeacher(),
+        ])
         setStats({
           ...teacherStats,
-          totalModules: moduleService.getModulesByTeacher().length, 
-          totalLessons: lessonService.getLessonsByTeacher().length
-          
-  
+          totalModules: teacherModules.length,
+          totalLessons: lessonService.getLessonsByTeacher().length,
         })
       } catch (err) {
         setError(err instanceof Error ? err : new Error("An unknown error occurred"))

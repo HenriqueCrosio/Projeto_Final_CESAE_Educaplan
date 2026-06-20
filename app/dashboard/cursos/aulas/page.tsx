@@ -6,7 +6,8 @@ import { moduleLessonService } from "@/services/data-services/module-lesson.serv
 import { lessonService } from "@/services/data-services/lesson.service";
 import { topicService } from "@/services/data-services/topic.service";
 import { Button } from "@/components/ui/button";
-import type { Module, Lesson, Topic } from "@/types/interfaces";
+import type { Lesson, Topic } from "@/types/interfaces";
+import type { Module } from "@prisma/client";
 import { CourseStatusEnum, PublishStatusEnum } from "@/types/interfaces";
 
 // Helper function: formats minutes as "X hora(s) e Y minuto(s)" in Portuguese.
@@ -230,21 +231,24 @@ const EditableModulesPage: React.FC = () => {
   const [lessonFilter, setLessonFilter] = useState<"DRAFT" | "COMPLETED">("DRAFT");
 
   useEffect(() => {
-    // Retrieve modules owned or created by the teacher.
-    const teacherModules = moduleService.getModulesByTeacher();
-    // Filter only modules that are editable (with PRIVATE publish status).
-    const editableModules = teacherModules.filter(
-      (mod) => mod.publishStatus === PublishStatusEnum.PRIVATE
-    );
-    // Sort modules so that the last created appears first (assuming newer modules have later createdAt dates).
-    editableModules.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setModules(editableModules);
-    // Optionally, select the first module by default.
-    if (editableModules.length > 0) {
-      setSelectedModule(editableModules[0]);
-    }
+    const fetchModules = async () => {
+      // Retrieve modules owned or created by the teacher.
+      const teacherModules = await moduleService.getModulesByTeacher();
+      // Filter only modules that are editable (with PRIVATE publish status).
+      const editableModules = teacherModules.filter(
+        (mod) => mod.publishStatus === PublishStatusEnum.PRIVATE
+      );
+      // Sort modules so that the last created appears first.
+      editableModules.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setModules(editableModules);
+      // Optionally, select the first module by default.
+      if (editableModules.length > 0) {
+        setSelectedModule(editableModules[0]);
+      }
+    };
+    fetchModules();
   }, []);
 
   return (
