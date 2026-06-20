@@ -94,6 +94,7 @@ export async function getUserWithRole(email: string) {
       teacher: true,
       student: true,
       admin: true,
+      memberships: { include: { organization: true }, take: 1 },
     },
   });
 
