@@ -1,6 +1,6 @@
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentTeacherId } from "@/lib/auth";
+import { getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
 import {
   createNotificationSchema,
   CreateNotification,
@@ -32,9 +32,10 @@ export async function markNotificationsAsSeen() {
 // Create a Notification
 export async function createNotification(data: Omit<CreateNotification, "teacherId">) {
   const teacherId = await getCurrentTeacherId();
+  const organizationId = await getCurrentOrganizationId();
   const validatedData = createNotificationSchema.parse({ ...data, teacherId });
 
-  return await prisma.notification.create({ data: validatedData });
+  return await prisma.notification.create({ data: { ...validatedData, organizationId } });
 }
 
 // Delete a Notification (Ensures only the owner can delete)

@@ -12,3 +12,16 @@ export async function getCurrentTeacherId() {
 
   return session.user.id;
 }
+
+// Helper function to get the current organization (tenant) ID from the session.
+// O provisioning (Fase 2) popula `session.user.org_id` no afterCallback.
+export async function getCurrentOrganizationId(): Promise<string> {
+  const session = await getSession();
+
+  const organizationId = session?.user?.org_id;
+  if (!organizationId) {
+    throw new Error("Unauthorized: No organization found in session.");
+  }
+
+  return organizationId as string;
+}

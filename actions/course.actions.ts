@@ -1,14 +1,15 @@
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentTeacherId } from "@/lib/auth";
+import { getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
 import { createCourseSchema, updateCourseSchema, Course, UpdateCourse } from "@/schemas/course.schemas";
 
-// Create a course (Automatically assigns `teacherId`)
+// Create a course (Automatically assigns `teacherId` and the current organization)
 export async function createCourse(data: Omit<Course, "ownerId">) {
   const teacherId = await getCurrentTeacherId();
+  const organizationId = await getCurrentOrganizationId();
   const validatedData = createCourseSchema.parse({ ...data, ownerId: teacherId });
 
-  return await prisma.course.create({ data: validatedData });
+  return await prisma.course.create({ data: { ...validatedData, organizationId } });
 }
 
 // Update a course (Ensures teacher can only modify their own course)
