@@ -13,6 +13,66 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─────────────────────────────────────────────────────────────
+// Multi-tenancy: Organization é a fronteira de isolamento.
+// Modelo híbrido: tabela Membership (N:N) pronta desde já, mas o
+// provisioning (Fase 2) cria 1 vínculo e a UI assume 1 org.
+// ─────────────────────────────────────────────────────────────
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships       Membership[]
+  courses           Course[]
+  modules           Module[]
+  lessons           Lesson[]
+  topics            Topic[]
+  objectives        Objective[]
+  exercises         Exercise[]
+  exams             Exam[]
+  materials         Material[]
+  moduleAssignments ModuleAssignment[]
+  classes           Class[]
+  teams             Team[]
+  enrollments       Enrollment[]
+  holidays          Holiday[]
+  lessonSchedules   LessonSchedule[]
+  events            Event[]
+  clients           Client[]
+  notifications     Notification[]
+  comments          Comment[]
+  shopItemsForSale  ShopItemForSale[]
+  shopItemsForRent  ShopItemForRent[]
+  purchasedItems    PurchasedItem[]
+  rentalPeriods     RentalPeriod[]
+
+  @@index([slug])
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model Membership {
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole @default(OWNER)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@id([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -25,13 +85,14 @@ model User {
   isDeleted      Boolean   @default(false)
   profile        Profile?
 
-  accounts Account[]
-  sessions Session[]
-  roles    UserRole[]
-  comments Comment[]
-  teacher  Teacher?
-  student  Student?
-  admin    Admin?
+  accounts    Account[]
+  sessions    Session[]
+  roles       UserRole[]
+  comments    Comment[]
+  teacher     Teacher?
+  student     Student?
+  admin       Admin?
+  memberships Membership[]
 
   @@index([email, isActive])
   @@index([userApiToken])
@@ -175,6 +236,9 @@ model Course {
   classes     Class[]
   comments    Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   publishStatus PublishStatusEnum @default(PRIVATE)
   forSale       ShopItemForSale?
   forRent       ShopItemForRent?
@@ -183,6 +247,8 @@ model Course {
   @@index([creatorId])
   @@index([ownerId])
   @@index([id, status])
+  @@index([organizationId])
+  @@index([organizationId, status])
 }
 
 model Module {
@@ -209,6 +275,9 @@ model Module {
   events                Event[]
   comments              Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   publishStatus PublishStatusEnum @default(PRIVATE)
   forSale       ShopItemForSale?
   forRent       ShopItemForRent?
@@ -216,6 +285,8 @@ model Module {
   @@index([creatorId])
   @@index([ownerId])
   @@index([courseId])
+  @@index([organizationId])
+  @@index([organizationId, courseId])
 }
 
 model Lesson {
@@ -231,7 +302,11 @@ model Lesson {
   schedules   LessonSchedule[]
   comments    Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([moduleId])
+  @@index([organizationId])
 }
 
 model Topic {
@@ -246,7 +321,11 @@ model Topic {
   objectives  Objective[]
   comments    Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([moduleId, order])
+  @@index([organizationId])
 }
 
 model Objective {
@@ -257,7 +336,11 @@ model Objective {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([topicId])
+  @@index([organizationId])
 }
 
 model ModuleAssignment {
@@ -273,11 +356,15 @@ model ModuleAssignment {
   startDate DateTime
   endDate   DateTime
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@unique([moduleId, teacherId, courseId, startDate, endDate])
   @@index([moduleId])
   @@index([teacherId])
   @@index([courseId])
   @@index([startDate, endDate])
+  @@index([organizationId])
 }
 
 enum CourseStatusEnum {
@@ -310,6 +397,9 @@ model Exercise {
   client         Client?             @relation(fields: [clientId], references: [id])
   comments       Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   publishStatus PublishStatusEnum @default(PRIVATE)
   forSale       ShopItemForSale?
   forRent       ShopItemForRent?
@@ -320,6 +410,7 @@ model Exercise {
   @@index([difficulty])
   @@index([creatorId])
   @@index([ownerId])
+  @@index([organizationId])
 }
 
 enum ExerciseTypeEnum {
@@ -357,6 +448,9 @@ model Exam {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   publishStatus PublishStatusEnum @default(PRIVATE)
   forSale       ShopItemForSale?
   forRent       ShopItemForRent?
@@ -365,6 +459,7 @@ model Exam {
   @@index([date])
   @@index([creatorId])
   @@index([ownerId])
+  @@index([organizationId])
 }
 
 enum ExamTypeEnum {
@@ -405,6 +500,9 @@ model Material {
   ownerId     String
   owner       Teacher      @relation("MaterialOwner", fields: [ownerId], references: [id])
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   publishStatus PublishStatusEnum @default(PRIVATE)
   forSale       ShopItemForSale?
   forRent       ShopItemForRent?
@@ -412,6 +510,7 @@ model Material {
   @@index([courseId])
   @@index([moduleId])
   @@index([topicId])
+  @@index([organizationId])
 }
 
 enum MaterialType {
@@ -454,10 +553,14 @@ model Comment {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([courseId])
   @@index([moduleId])
   @@index([topicId])
+  @@index([organizationId])
 }
 
 enum EnrollmentStatusEnum {
@@ -486,9 +589,13 @@ model Enrollment {
   holidays  Holiday[]
   comments  Comment[]
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@unique([courseId, classId])
   @@index([courseId])
   @@index([classId])
+  @@index([organizationId])
 }
 
 model Class {
@@ -507,7 +614,11 @@ model Class {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([courseId])
+  @@index([organizationId])
 }
 
 model Holiday {
@@ -520,8 +631,12 @@ model Holiday {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([enrollmentId])
   @@index([startDate, endDate])
+  @@index([organizationId])
 }
 
 model LessonSchedule {
@@ -535,8 +650,12 @@ model LessonSchedule {
   teacherId String?
   teacher   Teacher? @relation(fields: [teacherId], references: [id])
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([lessonId])
   @@index([dateTime])
+  @@index([organizationId])
 }
 
 enum EventTypeEnum {
@@ -562,10 +681,14 @@ model Event {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([courseId])
   @@index([moduleId])
   @@index([creatorId])
   @@index([startTime, endTime])
+  @@index([organizationId])
 }
 
 model Team {
@@ -582,7 +705,11 @@ model Team {
   teacherId   String?
   teacher     Teacher?   @relation(fields: [teacherId], references: [id])
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([classId])
+  @@index([organizationId])
 }
 
 model Client {
@@ -595,7 +722,11 @@ model Client {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([creatorId])
+  @@index([organizationId])
 }
 
 enum NotificationTypeEnum {
@@ -621,10 +752,14 @@ model Notification {
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([type])
   @@index([teacherId])
   @@index([studentId])
   @@index([seen])
+  @@index([organizationId])
 }
 
 enum CurrencyTypeEnum {
@@ -657,6 +792,9 @@ model ShopItemForSale {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @default(now())
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   course    Course?         @relation(fields: [itemId], references: [id], map: "ShopItemForSale_course_fkey")
   module    Module?         @relation(fields: [itemId], references: [id], map: "ShopItemForSale_module_fkey")
   exercise  Exercise?       @relation(fields: [itemId], references: [id], map: "ShopItemForSale_exercise_fkey")
@@ -666,6 +804,7 @@ model ShopItemForSale {
 
   @@unique([itemType, itemId])
   @@index([itemType, itemId])
+  @@index([organizationId])
 }
 
 model ShopItemForRent {
@@ -677,6 +816,9 @@ model ShopItemForRent {
   currency   CurrencyTypeEnum @default(EUR)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   course   Course?   @relation(fields: [itemId], references: [id], map: "ShopItemForRent_course_fkey")
   module   Module?   @relation(fields: [itemId], references: [id], map: "ShopItemForRent_module_fkey")
@@ -690,6 +832,7 @@ model ShopItemForRent {
   @@unique([itemType, itemId])
   @@index([itemType, itemId])
   @@index([isVisible])
+  @@index([organizationId])
 }
 
 model PurchasedItem {
@@ -702,7 +845,11 @@ model PurchasedItem {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@unique([teacherId, shopItemId])
+  @@index([organizationId])
 }
 
 model RentalPeriod {
@@ -717,7 +864,11 @@ model RentalPeriod {
   updatedAt     DateTime        @updatedAt
   isActive      Boolean         @default(true)
 
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@index([teacherId, shopItemId])
   @@index([rentStartDate, rentEndDate])
   @@index([isActive])
+  @@index([organizationId])
 }
