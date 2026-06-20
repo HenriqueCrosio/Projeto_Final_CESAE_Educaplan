@@ -1,5 +1,7 @@
-import type { Course, User, ClassScheduleLessons, Enrollment } from "@/types/interfaces"
+import type { User, ClassScheduleLessons, Enrollment } from "@/types/interfaces"
+import type { Course } from "@prisma/client"
 import { useCentralStore } from "@/store/central.store"
+import { courseService } from "@/services/data-services/course.service"
 
 export class TeacherDashboardService {
   private static instance: TeacherDashboardService
@@ -25,9 +27,9 @@ export class TeacherDashboardService {
     return TeacherDashboardService.instance
   }
 
-    public getTeacherStats() {
+    public async getTeacherStats() {
     const teacherId = this.getTeacherId();
-    const courses = this.getTeacherCourses(teacherId)
+    const courses = await courseService.getCoursesByTeacher() // fonte da verdade: Postgres
     const students = this.getTeacherStudents(teacherId)
     const scheduledLessons = this.getTeacherScheduledLessons()
     const enrollments = this.getTeacherEnrollments(teacherId)
@@ -44,29 +46,25 @@ export class TeacherDashboardService {
     }
   }
 
-  private getTeacherCourses(teacherId: string): Course[] {
-    return this.store.data.courses.filter((course: Course) => course.ownerId.includes(teacherId))
-  }
-
   private getTeacherStudents(teacherId: string): User[] {
-    const teacherClassIds = this.store.data.classes
+    const teacherClassIds = (this.store.data.classes || [])
       .filter((cls: any) => cls.teacherId === teacherId)
       .map((cls: any) => cls.id)
 
-    const studentIds = this.store.data.classStudents
+    const studentIds = (this.store.data.classStudents || [])
       .filter((cs: any) => teacherClassIds.includes(cs.classId))
       .map((cs: any) => cs.studentId)
 
-    return this.store.data.users.filter((user: User) => studentIds.includes(user.id))
+    return (this.store.data.users || []).filter((user: User) => studentIds.includes(user.id))
   }
 
   public getTeacherScheduledLessons(): ClassScheduleLessons[] {
     const teacherId = this.getTeacherId();
-    return this.store.data.classScheduleLessons.filter((lesson: ClassScheduleLessons) => lesson.teacherId === teacherId)
+    return (this.store.data.classScheduleLessons || []).filter((lesson: ClassScheduleLessons) => lesson.teacherId === teacherId)
   }
 
   private getTeacherEnrollments(teacherId: string): Enrollment[] {
-    return this.store.data.enrollments.filter((enrollment: Enrollment) => enrollment.teacherId === teacherId)
+    return (this.store.data.enrollments || []).filter((enrollment: Enrollment) => enrollment.teacherId === teacherId)
   }
 
   private getUpcomingLessons(scheduledLessons: ClassScheduleLessons[], limit: number): ClassScheduleLessons[] {
