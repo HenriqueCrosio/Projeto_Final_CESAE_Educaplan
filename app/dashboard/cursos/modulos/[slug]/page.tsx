@@ -5,13 +5,14 @@ import { useParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Topic, Lesson } from "@/types/interfaces"
+import type { Lesson } from "@/types/interfaces"
 import type { Module } from "@prisma/client"
+import type { TopicWithObjectives } from "@/services/data-services/topic.service"
 import { normalize } from "@/lib/utils/validation.utils"
 import { moduleWrapperService } from "@/services/wrapper-services/module.wrapper-service"
 
 interface ModuleWithDetails extends Module {
-  topics: Topic[]
+  topics: TopicWithObjectives[]
   lessons: Lesson[]
 }
 

@@ -40,12 +40,18 @@ const ModuleCard: React.FC<{ module: Module; lessonFilter: "DRAFT" | "COMPLETED"
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [lectureHours, setLectureHours] = useState<number>(0);
+  const [availableTopics, setAvailableTopics] = useState<Topic[]>([]);
 
   useEffect(() => {
     // Retrieve the lessons for this module.
     const moduleLessons = moduleLessonService.getLessonsForModule(module.id);
     setLessons(moduleLessons);
   }, [module.id]);
+
+  useEffect(() => {
+    // Tópicos do professor (Postgres). Usados para associar a aulas.
+    topicService.getTopicsByTeacher().then((t) => setAvailableTopics(t as unknown as Topic[]));
+  }, []);
 
   // Filter lessons based on the lessonFilter prop.
   const filteredLessons = lessons.filter((lesson) => lesson.status === lessonFilter);
@@ -60,8 +66,6 @@ const ModuleCard: React.FC<{ module: Module; lessonFilter: "DRAFT" | "COMPLETED"
 
   // Save changes to the lesson (update topics, lecture hours, and mark as COMPLETED).
   const handleSaveLessonChanges = async (lesson: Lesson) => {
-    // Get the teacher's topics.
-    const availableTopics: Topic[] = topicService.getTopicsByTeacher();
     // Get full topic objects for selected topics.
     const newTopics = availableTopics.filter((topic) =>
       selectedTopicIds.includes(topic.id)
@@ -143,7 +147,7 @@ const ModuleCard: React.FC<{ module: Module; lessonFilter: "DRAFT" | "COMPLETED"
                     <div className="mb-2">
                       <label className="font-medium block">Selecionar Tópicos:</label>
                       <div className="flex flex-wrap gap-2">
-                        {topicService.getTopicsByTeacher().map((topic) => (
+                        {availableTopics.map((topic) => (
                           <label key={topic.id} className="flex items-center gap-1">
                             <input
                               type="checkbox"

@@ -7,20 +7,19 @@ import { topicService } from "@/services/data-services/topic.service"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Topic } from "@/types/interfaces"
-import { normalize } from "@/lib/utils/validation.utils"
+import type { TopicListItem } from "@/services/data-services/topic.service"
 
 export default function TopicsPage() {
-  const [topics, setTopics] = useState<Topic[]>([])
-  const [filteredTopics, setFilteredTopics] = useState<Topic[]>([])
+  const [topics, setTopics] = useState<TopicListItem[]>([])
+  const [filteredTopics, setFilteredTopics] = useState<TopicListItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get("q") || ""
 
   useEffect(() => {
-    const fetchTopics = () => {
+    const fetchTopics = async () => {
       try {
-        const ownTopics = topicService.getTopicsByTeacher()
+        const ownTopics = await topicService.getTopicsByTeacher()
         setTopics(ownTopics)
         setFilteredTopics(ownTopics)
       } finally {
@@ -72,11 +71,13 @@ export default function TopicsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTopics.map((topic) => (
-            <Link key={topic.id} href={`/dashboard/cursos/topicos/${topic.slug}`} className="block h-full">
+            <Link key={topic.id} href={`/dashboard/cursos/topicos/${topic.id}`} className="block h-full">
               <Card className="h-full flex flex-col hover:shadow-lg transition-shadow duration-300">
                 <CardHeader>
                   <CardTitle className="line-clamp-1">{topic.name}</CardTitle>
-                  <CardDescription className="line-clamp-1">{topic.category}</CardDescription>
+                  <CardDescription className="line-clamp-1">
+                    {topic.module?.name ?? "Sem módulo"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col justify-between">
                   <div>
@@ -89,11 +90,6 @@ export default function TopicsPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Badge variant={topic.publishStatus === "PUBLISHED_FOR_RENT" ? "default" : "outline"}>
-                      {normalize(topic.publishStatus)}
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>

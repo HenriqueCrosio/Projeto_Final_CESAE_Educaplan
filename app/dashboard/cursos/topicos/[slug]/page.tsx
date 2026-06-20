@@ -6,21 +6,20 @@ import { topicService } from "@/services/data-services/topic.service"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { Topic } from "@/types/interfaces"
-import { normalize } from "@/lib/utils/validation.utils"
+import type { TopicListItem } from "@/services/data-services/topic.service"
 import { GoBackButton } from "@/components/buttons/go-back-button"
 
 export default function TopicDetailPage() {
-  const [topic, setTopic] = useState<Topic | null>(null)
+  const [topic, setTopic] = useState<TopicListItem | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const params = useParams()
-  const slug = params.slug as string
+  const topicId = params.slug as string
 
   useEffect(() => {
     const fetchTopic = async () => {
       setIsLoading(true)
       try {
-        const fetchedTopic = await topicService.getTopicBySlug(slug)
+        const fetchedTopic = await topicService.getTopicById(topicId)
         setTopic(fetchedTopic)
       } catch (error) {
         console.error("Failed to fetch topic:", error)
@@ -30,7 +29,7 @@ export default function TopicDetailPage() {
     }
 
     fetchTopic()
-  }, [slug])
+  }, [topicId])
 
   if (isLoading) {
     return (
@@ -67,7 +66,9 @@ export default function TopicDetailPage() {
       <Card>
         <CardHeader>
         <CardTitle className="line-clamp-1">{topic.name}</CardTitle>
-        <CardDescription className="line-clamp-1">{topic.category}</CardDescription>
+        <CardDescription className="line-clamp-1">
+          {topic.module?.name ?? "Sem módulo"}
+        </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-6">{topic.description}</p>
@@ -79,12 +80,6 @@ export default function TopicDetailPage() {
               </li>
             ))}
                   </ul>
-        <div className="flex gap-2 mt-4">
-                  <Badge variant={topic.publishStatus === "PUBLISHED_FOR_RENT" ? "default" : "outline"}>
-              {normalize(topic.publishStatus)}
-            </Badge>
-          </div>
-
         </CardContent>
       </Card>
     </div>

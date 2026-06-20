@@ -47,8 +47,7 @@ export default function EnrollmentPage() {
     const details = enrollmentDataService.getEnrollmentDetailsBySlug(slug)
     setEnrollmentDetails(details)
 
-    const topics = topicService.getTopicsByTeacher()
-    setAllTopics(topics)
+    topicService.getTopicsByTeacher().then((topics) => setAllTopics(topics as unknown as Topic[]))
   }, [slug, data])
 
   const handleAddLesson = async () => {
