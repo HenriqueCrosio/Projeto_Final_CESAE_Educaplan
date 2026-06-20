@@ -4,6 +4,10 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { loadMockData } from "@/lib/utils/general.utils";
 import { scheduleService } from "@/services/wrapper-services/enrollment-schedule.wrapper-service";
 
+// Referência estável de array vazio: evita que selectors do Zustand recebam
+// uma nova referência a cada render (causa de loops infinitos de re-render).
+const EMPTY_ARRAY: any[] = [];
+
 interface CentralStoreState {
   data: Record<string, any[]>; // Stores all mock data
   loadInitialData: () => Promise<void>; // Loads mock data at startup
@@ -50,7 +54,7 @@ export const useCentralStore = create<CentralStoreState>()(
 
       },
 
-      getData: (fileKey) => get().data[fileKey] || [],
+      getData: (fileKey) => get().data[fileKey] || EMPTY_ARRAY,
 
       addData: (fileKey, newData) => {
         set((state) => {
