@@ -65,6 +65,12 @@ export async function getCourseBySlug(slug: string) {
   return prisma.course.findFirst({ where: { slug, organizationId } });
 }
 
+// Busca um curso por id, restrito à organização da sessão.
+export async function getCourseById(id: string) {
+  const organizationId = await getCurrentOrganizationId();
+  return prisma.course.findFirst({ where: { id, organizationId } });
+}
+
 // Categorias distintas usadas pelos cursos do professor.
 export async function getCourseCategories() {
   const teacherId = await getCurrentTeacherId();
