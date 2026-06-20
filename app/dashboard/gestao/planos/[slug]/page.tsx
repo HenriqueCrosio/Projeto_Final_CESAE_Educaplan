@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { enrollmentDataService, EnrollmentDetails } from "@/services/wrapper-services/enrollment-data.wrapper-service"
 import { topicService } from "@/services/data-services/topic.service"
-import { moduleLessonService } from "@/services/data-services/module-lesson.service"
 import { generateId, minutesToHours } from "@/lib/utils/general.utils" // Use your existing utility
 import { CourseStatusEnum, Lesson, Module, Topic } from "@/types/interfaces"
 import { useCentralStore } from "@/store/central.store"
@@ -77,8 +76,7 @@ export default function EnrollmentPage() {
     }
 
     store.addData("lessons", newLesson)
-
-    await moduleLessonService.addLessonToModule(selectedModule.id, newLessonId)
+    // Associação via moduleLessons é tratada no fluxo legado de matrícula (Enrollment ainda não migrado).
 
     setSelectedModule(null)
   }

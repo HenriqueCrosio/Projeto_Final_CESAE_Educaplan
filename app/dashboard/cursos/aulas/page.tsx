@@ -6,9 +6,10 @@ import { moduleLessonService } from "@/services/data-services/module-lesson.serv
 import { lessonService } from "@/services/data-services/lesson.service";
 import { topicService } from "@/services/data-services/topic.service";
 import { Button } from "@/components/ui/button";
-import type { Lesson, Topic } from "@/types/interfaces";
 import type { Module } from "@prisma/client";
-import { CourseStatusEnum, PublishStatusEnum } from "@/types/interfaces";
+import { CourseStatusEnum, PublishStatusEnum } from "@prisma/client";
+import type { LessonWithTopics } from "@/services/data-services/lesson.service";
+import type { TopicListItem } from "@/services/data-services/topic.service";
 
 // Helper function: formats minutes as "X hora(s) e Y minuto(s)" in Portuguese.
 const formatDuration = (minutes: number): string => {
@@ -36,71 +37,60 @@ const ModuleCard: React.FC<{ module: Module; lessonFilter: "DRAFT" | "COMPLETED"
   module,
   lessonFilter,
 }) => {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [lessons, setLessons] = useState<LessonWithTopics[]>([]);
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [lectureHours, setLectureHours] = useState<number>(0);
-  const [availableTopics, setAvailableTopics] = useState<Topic[]>([]);
+  const [availableTopics, setAvailableTopics] = useState<TopicListItem[]>([]);
 
   useEffect(() => {
-    // Retrieve the lessons for this module.
-    const moduleLessons = moduleLessonService.getLessonsForModule(module.id);
-    setLessons(moduleLessons);
+    // Retrieve the lessons for this module (Postgres).
+    moduleLessonService.getLessonsForModule(module.id).then(setLessons);
   }, [module.id]);
 
   useEffect(() => {
     // Tópicos do professor (Postgres). Usados para associar a aulas.
-    topicService.getTopicsByTeacher().then((t) => setAvailableTopics(t as unknown as Topic[]));
+    topicService.getTopicsByTeacher().then(setAvailableTopics);
   }, []);
 
   // Filter lessons based on the lessonFilter prop.
   const filteredLessons = lessons.filter((lesson) => lesson.status === lessonFilter);
 
   // Open the lesson editor.
-  const handleEditLessonClick = (lesson: Lesson) => {
+  const handleEditLessonClick = (lesson: LessonWithTopics) => {
     setEditingLessonId(lesson.id);
-    setSelectedTopicIds(lesson.topics ? lesson.topics.map((t) => t.id) : []);
-    // Pre-fill lecture hours from the current duration.
+    setSelectedTopicIds(lesson.topics.map((t) => t.id));
+    // Pre-fill lecture hours from the current duration (stored in minutes).
     setLectureHours(lesson.duration ? lesson.duration / 60 : 0);
   };
 
   // Save changes to the lesson (update topics, lecture hours, and mark as COMPLETED).
-  const handleSaveLessonChanges = async (lesson: Lesson) => {
-    // Get full topic objects for selected topics.
-    const newTopics = availableTopics.filter((topic) =>
-      selectedTopicIds.includes(topic.id)
-    );
-    // Convert lecture hours to minutes.
+  const handleSaveLessonChanges = async (lesson: LessonWithTopics) => {
     const newDuration = Math.round(lectureHours * 60);
-    // Update the lesson (and change status to COMPLETED).
     const updateResult = await lessonService.updateLesson(lesson.id, {
-      topics: newTopics,
+      topicIds: selectedTopicIds,
       duration: newDuration,
       status: CourseStatusEnum.COMPLETED,
     });
     if (updateResult.success) {
-      // Refresh lessons list.
-      const updatedLessons = moduleLessonService.getLessonsForModule(module.id);
+      const updatedLessons = await moduleLessonService.getLessonsForModule(module.id);
       setLessons(updatedLessons);
       setEditingLessonId(null);
     }
   };
 
-  // Add a new lesson if none exist or as an extra lesson.
+  // Add a new lesson to this module.
   const handleAddLesson = async () => {
     const order = lessons.length + 1;
-    const lessonData = {
+    const result = await lessonService.addLesson({
       name: `Aula ${order}`,
       description: `Aula ${order} do módulo.`,
-      duration: 120, // Default: 2 hours (120 minutes)
+      duration: 120, // Padrão: 2 horas (120 minutos)
       order,
-      lectured: false,
-      status: CourseStatusEnum.DRAFT,
-    };
-    const result = await lessonService.addLesson(lessonData);
+      moduleId: module.id,
+    });
     if (result.success && result.lesson) {
-      await moduleLessonService.addLessonToModule(module.id, result.lesson.id);
-      const updatedLessons = moduleLessonService.getLessonsForModule(module.id);
+      const updatedLessons = await moduleLessonService.getLessonsForModule(module.id);
       setLessons(updatedLessons);
     }
   };
