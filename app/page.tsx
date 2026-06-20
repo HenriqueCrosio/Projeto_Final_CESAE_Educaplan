@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 
-export default function AnimatedTitle({
+function AnimatedTitle({
   title = "Educaplan Dept.",
   subtitle = "We are here to help you, so you can help others",
 }: {
@@ -56,5 +56,9 @@ export default function AnimatedTitle({
       </div>
     </div>
   )
+}
+
+export default function Page() {
+  return <AnimatedTitle />
 }
 
