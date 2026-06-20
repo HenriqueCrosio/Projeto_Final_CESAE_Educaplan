@@ -296,8 +296,10 @@ model Lesson {
   description String?
   duration    Float
   order       Int
+  status      CourseStatusEnum @default(DRAFT)
   moduleId    String
   module      Module           @relation(fields: [moduleId], references: [id])
+  topics      Topic[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   schedules   LessonSchedule[]
@@ -320,6 +322,7 @@ model Topic {
   materials   Material[]
   exercises   Exercise[]
   objectives  Objective[]
+  lessons     Lesson[]
   comments    Comment[]
 
   organizationId String
