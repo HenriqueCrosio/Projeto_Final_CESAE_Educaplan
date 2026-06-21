@@ -1,24 +1,16 @@
-import type { User, ClassScheduleLessons, Enrollment } from "@/types/interfaces"
 import type { Course } from "@prisma/client"
-import { useCentralStore } from "@/store/central.store"
 import { courseService } from "@/services/data-services/course.service"
+import { getMyStudents } from "@/actions/student.actions"
+import { getMyEnrollments } from "@/actions/enrollment.actions"
+import { getMySchedules } from "@/actions/schedule.actions"
+
+type Enrollment = Awaited<ReturnType<typeof getMyEnrollments>>[number]
+type Schedule = Awaited<ReturnType<typeof getMySchedules>>[number]
 
 export class TeacherDashboardService {
   private static instance: TeacherDashboardService
-  private store: ReturnType<typeof useCentralStore.getState>
-  private teacherId = "cm6bntysq0005s911c7r7o87g"; 
 
-  private constructor() {
-    this.store = useCentralStore.getState()
-
-    useCentralStore.subscribe((state) => {
-      this.store = state
-    })
-  }
-
-  private getTeacherId(): string {
-    return this.teacherId;
-  }
+  private constructor() {}
 
   public static getInstance(): TeacherDashboardService {
     if (!TeacherDashboardService.instance) {
@@ -27,12 +19,18 @@ export class TeacherDashboardService {
     return TeacherDashboardService.instance
   }
 
-    public async getTeacherStats() {
-    const teacherId = this.getTeacherId();
-    const courses = await courseService.getCoursesByTeacher() // fonte da verdade: Postgres
-    const students = this.getTeacherStudents(teacherId)
-    const scheduledLessons = this.getTeacherScheduledLessons()
-    const enrollments = this.getTeacherEnrollments(teacherId)
+  public async getTeacherScheduledLessons(): Promise<Schedule[]> {
+    return getMySchedules()
+  }
+
+  public async getTeacherStats() {
+    // Tudo do Postgres (org + professor da sessão).
+    const [courses, students, enrollments, scheduledLessons] = await Promise.all([
+      courseService.getCoursesByTeacher(),
+      getMyStudents(),
+      getMyEnrollments(),
+      getMySchedules(),
+    ])
 
     return {
       totalCourses: courses.length,
@@ -46,68 +44,45 @@ export class TeacherDashboardService {
     }
   }
 
-  private getTeacherStudents(teacherId: string): User[] {
-    const teacherClassIds = (this.store.data.classes || [])
-      .filter((cls: any) => cls.teacherId === teacherId)
-      .map((cls: any) => cls.id)
-
-    const studentIds = (this.store.data.classStudents || [])
-      .filter((cs: any) => teacherClassIds.includes(cs.classId))
-      .map((cs: any) => cs.studentId)
-
-    return (this.store.data.users || []).filter((user: User) => studentIds.includes(user.id))
-  }
-
-  public getTeacherScheduledLessons(): ClassScheduleLessons[] {
-    const teacherId = this.getTeacherId();
-    return (this.store.data.classScheduleLessons || []).filter((lesson: ClassScheduleLessons) => lesson.teacherId === teacherId)
-  }
-
-  private getTeacherEnrollments(teacherId: string): Enrollment[] {
-    return (this.store.data.enrollments || []).filter((enrollment: Enrollment) => enrollment.teacherId === teacherId)
-  }
-
-  private getUpcomingLessons(scheduledLessons: ClassScheduleLessons[], limit: number): ClassScheduleLessons[] {
+  private getUpcomingLessons(scheduledLessons: Schedule[], limit: number) {
     const now = new Date()
     return scheduledLessons
-      .filter((lesson) => new Date(lesson.startTime) > now)
-      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .filter((s) => new Date(s.dateTime) > now)
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
       .slice(0, limit)
+      .map((s) => ({ id: s.lesson.name, name: s.lesson.name, startTime: s.dateTime }))
   }
 
-  private calculateCourseCompletionRates(courses: Course[], enrollments: Enrollment[]): { [courseId: string]: number } {
+  private calculateCourseCompletionRates(
+    courses: Course[],
+    enrollments: Enrollment[]
+  ): { [courseId: string]: number } {
     const completionRates: { [courseId: string]: number } = {}
+    const now = new Date()
     courses.forEach((course) => {
       const courseEnrollments = enrollments.filter((e) => e.courseId === course.id)
-      const completedEnrollments = courseEnrollments.filter((e) => new Date(e.endDate) < new Date())
+      const completed = courseEnrollments.filter((e) => new Date(e.endDate) < now)
       completionRates[course.id] =
-        courseEnrollments.length > 0 ? (completedEnrollments.length / courseEnrollments.length) * 100 : 0
+        courseEnrollments.length > 0 ? (completed.length / courseEnrollments.length) * 100 : 0
     })
     return completionRates
   }
 
-  private calculateAverageLessonDuration(lessons: ClassScheduleLessons[]): number {
-    const totalDuration = lessons.reduce((sum, lesson) => {
-      if (!lesson.startTime || !lesson.endTime) return sum
-      const start = new Date(lesson.startTime)
-      const end = new Date(lesson.endTime)
-      return sum + (end.getTime() - start.getTime()) / (1000 * 60) // Convert to minutes
-    }, 0)
-    return lessons.length > 0 ? totalDuration / lessons.length : 0
+  private calculateAverageLessonDuration(scheduledLessons: Schedule[]): number {
+    if (scheduledLessons.length === 0) return 0
+    const total = scheduledLessons.reduce((sum, s) => sum + (s.duration || 0), 0)
+    return total / scheduledLessons.length
   }
 
   private getMostPopularCourse(courses: Course[], enrollments: Enrollment[]): Course | null {
-    const courseCounts = courses.map((course) => ({
+    if (courses.length === 0) return null
+    const counts = courses.map((course) => ({
       course,
       count: enrollments.filter((e) => e.courseId === course.id).length,
     }))
-    const mostPopular = courseCounts.reduce(
-      (max, current) => (current.count > max.count ? current : max),
-      courseCounts[0],
-    )
+    const mostPopular = counts.reduce((max, current) => (current.count > max.count ? current : max), counts[0])
     return mostPopular ? mostPopular.course : null
   }
 }
 
 export const teacherDashboardService = TeacherDashboardService.getInstance()
-

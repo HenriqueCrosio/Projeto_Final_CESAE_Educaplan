@@ -615,6 +615,7 @@ model Class {
   teams       Team[]
   enrollments Enrollment[]
   comments    Comment[]
+  schedules   LessonSchedule[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -647,6 +648,8 @@ model LessonSchedule {
   id        String   @id @default(cuid())
   lessonId  String
   lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id])
   dateTime  DateTime
   duration  Int // Duration in minutes
   createdAt DateTime @default(now())
@@ -658,6 +661,7 @@ model LessonSchedule {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([lessonId])
+  @@index([classId])
   @@index([dateTime])
   @@index([organizationId])
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar as BigCalendar } from 'react-big-calendar';
 import { dateFnsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -10,8 +10,7 @@ import {parse} from 'date-fns/parse';
 import {startOfWeek} from 'date-fns/startOfWeek';
 import {getDay} from 'date-fns/getDay';
 import {enGB} from 'date-fns/locale/en-GB';
-import { TeacherDashboardService } from '@/services/wrapper-services/teacher.wrapper-service';
-import { useTeacherStats } from '@/lib/hooks/use-teacher-stats';
+import { getMySchedules } from '@/actions/schedule.actions';
 
 const locales = {
   'en-GB': enGB,
@@ -25,20 +24,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-export interface ClassScheduleLessons {
-  id: string;
-  classId: string;
-  lessonId: string;
-  courseId: string;
-  moduleId: string;
-  teacherId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  enrollmentId: string;
-  duration: number;
-  startTime: Date;
-  endTime?: Date;
-}
+type Schedule = Awaited<ReturnType<typeof getMySchedules>>[number];
 
 interface CalendarEvent {
   id: string;
@@ -47,31 +33,31 @@ interface CalendarEvent {
   end: Date;
 }
 
-const transformLessonsToEvents = (lessons: ClassScheduleLessons[]): CalendarEvent[] => {
-  return lessons.map(lesson => {
-    const start = new Date(lesson.startTime);
-    const end = lesson.endTime ? new Date(lesson.endTime) : new Date(start.getTime() + lesson.duration * 60000);
-    const title = `Curso: ${lesson.courseId} - Lição: ${lesson.lessonId}`;
+const transformToEvents = (schedules: Schedule[]): CalendarEvent[] =>
+  schedules.map((s) => {
+    const start = new Date(s.dateTime);
+    const end = new Date(start.getTime() + s.duration * 60000);
+    const courseName = s.lesson.module?.course?.name ?? 'Curso';
     return {
-      id: lesson.id,
-      title,
+      id: s.id,
+      title: `${courseName} — ${s.lesson.name} (${s.class.name})`,
       start,
       end,
     };
   });
-};
 
 type CalendarView = 'month' | 'week' | 'day' | 'agenda';
 
 const CalendarPage = () => {
-  
-  const lessonsData: ClassScheduleLessons[] = TeacherDashboardService.getInstance().getTeacherScheduledLessons();
-
-  const events = useMemo(() => transformLessonsToEvents(lessonsData), [lessonsData]);
-
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [view, setView] = useState<CalendarView>('month');
-
   const [date, setDate] = useState(new Date());
+
+  useEffect(() => {
+    getMySchedules().then(setSchedules);
+  }, []);
+
+  const events = useMemo(() => transformToEvents(schedules), [schedules]);
 
   return (
     <div className="container mx-auto p-4">
