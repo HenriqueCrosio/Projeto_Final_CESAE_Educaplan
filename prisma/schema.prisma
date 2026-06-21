@@ -211,8 +211,9 @@ model Student {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   comments      Comment[]
-  addedById     String
-  addedBy       Teacher        @relation("AddedStudents", fields: [addedById], references: [id])
+  // Opcional: alunos self-signup (hub pessoal) não têm professor que os adicionou.
+  addedById     String?
+  addedBy       Teacher?       @relation("AddedStudents", fields: [addedById], references: [id])
 
   @@index([studentId])
 }
