@@ -8,7 +8,6 @@ import { courseWrapperService } from "@/services/wrapper-services/course.wrapper
 import { enrollmentWrapperService } from "@/services/wrapper-services/enrollment.wrapper-service";
 import { moduleAssignmentService } from "@/services/data-services/assignment.service";
 import { classService } from "@/services/data-services/class.service";
-import { classStudentService } from "@/services/data-services/class-student.service";
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -62,8 +61,7 @@ const EnrollmentPage = () => {
         }
       };
       fetchCourseDetails();
-      const allClasses = classService.getClassesByTeacher();
-      setClasses(allClasses);
+      classService.getClassesByTeacher().then((allClasses) => setClasses(allClasses));
       setSelectedClassIds([]);
     } else {
       setSelectedCourse(null);
@@ -111,11 +109,13 @@ const EnrollmentPage = () => {
     const teacherId = "cm6bntysq0005s911c7r7o87g";
     const currentYear = new Date().getFullYear();
     
-    const renamedClasses = selectedClassIds.map((classId, index) => {
-      const newName = generateClassName(index);
-      classService.updateClassName(classId, newName);
-      return classId;
-    });
+    const renamedClasses = await Promise.all(
+      selectedClassIds.map(async (classId, index) => {
+        const newName = generateClassName(index);
+        await classService.updateClassName(classId, newName);
+        return classId;
+      })
+    );
   
     const enrollmentData = {
       name: enrollmentName,
@@ -205,7 +205,7 @@ const EnrollmentPage = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {classes.map((cls) => {
-                    const studentsInClass = classStudentService.getClassStudentsByClass(cls.id);
+                    const studentCount = cls._count?.students ?? 0;
                     return (
                       <div
                         key={cls.id}
@@ -222,7 +222,7 @@ const EnrollmentPage = () => {
                       >
                         <h3 className="font-bold">{cls.name}</h3>
                         <p className="text-sm text-gray-600">
-                          Alunos: {studentsInClass.length}
+                          Alunos: {studentCount}
                         </p>
                       </div>
                     );

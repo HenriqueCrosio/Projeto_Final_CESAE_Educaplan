@@ -74,7 +74,7 @@ class EnrollmentWrapperService {
    * @param enrollmentId ID do Enrollment.
    * @returns Objeto contendo os detalhes do enrollment ou null se não encontrado.
    */
-  public getEnrollmentDetails(enrollmentId: string): EnrollmentDetails | null {
+  public async getEnrollmentDetails(enrollmentId: string): Promise<EnrollmentDetails | null> {
     try {
       const enrollment = enrollmentService.getEnrollmentById(enrollmentId);
       if (!enrollment) {
@@ -92,13 +92,14 @@ class EnrollmentWrapperService {
         }
       }
 
-      // Recupera as Classes associadas (caso existam)
+      // Recupera as Classes associadas (Postgres). Cast transitório: a entidade
+      // Enrollment ainda é legada (Zustand) e será migrada na sua própria fase.
       const classes: Class[] = [];
       if (enrollment.classIds && enrollment.classIds.length > 0) {
         for (const classId of enrollment.classIds) {
-          const classItem = classService.getClassById(classId);
+          const classItem = await classService.getClassById(classId);
           if (classItem) {
-            classes.push(classItem);
+            classes.push(classItem as unknown as Class);
           }
         }
       }

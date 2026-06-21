@@ -1,24 +1,58 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useState, useEffect, type FormEvent } from "react"
 
-import { userService } from "@/services/data-services/user.service"
+import { addStudent, getMyStudents } from "@/actions/student.actions"
 import { classService } from "@/services/data-services/class.service"
-import { classStudentService } from "@/services/data-services/class-student.service"
+import { courseService } from "@/services/data-services/course.service"
+import { getClassById } from "@/actions/class.actions"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-import type { User, Class, ClassStudent } from "@/types/interfaces"
 import { generateRandomColor, validateEmail } from "@/lib/utils"
 
+type StudentItem = Awaited<ReturnType<typeof getMyStudents>>[number]
+type ClassWithStudents = NonNullable<Awaited<ReturnType<typeof getClassById>>>
+type CourseOption = { id: string; name: string }
+
+const studentLabel = (s: StudentItem) =>
+  s.user.profile?.displayName?.trim() || s.user.email
+
 const ManageStudentsAndClassesPage = () => {
+  const [students, setStudents] = useState<StudentItem[]>([])
+  const [courses, setCourses] = useState<CourseOption[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+
   const [studentUsername, setStudentUsername] = useState("")
   const [studentDomain, setStudentDomain] = useState("gmail.com")
-  const [students, setStudents] = useState<User[]>(userService.getStudents())
   const [studentLoading, setStudentLoading] = useState(false)
+
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
+  const [confirmedClasses, setConfirmedClasses] = useState<ClassWithStudents[]>([])
+  const [visibleClassStudents, setVisibleClassStudents] = useState<{ [key: string]: boolean }>({})
+  const [confirmLoading, setConfirmLoading] = useState(false)
+
+  const generateTurmaName = () => `Turma ${Date.now()}`
+  const [turmaName, setTurmaName] = useState(generateTurmaName())
+  const [turmaColor, setTurmaColor] = useState(generateRandomColor())
+
+  useEffect(() => {
+    const load = async () => {
+      const [fetchedStudents, fetchedCourses] = await Promise.all([
+        getMyStudents(),
+        courseService.getCoursesByTeacher(),
+      ])
+      setStudents(fetchedStudents)
+      setCourses(fetchedCourses.map((c: CourseOption) => ({ id: c.id, name: c.name })))
+    }
+    load()
+  }, [])
+
+  const availableStudents = students.filter((s) => !selectedStudentIds.includes(s.id))
+  const selectedStudents = students.filter((s) => selectedStudentIds.includes(s.id))
 
   const handleAddStudent = async (e: FormEvent) => {
     e.preventDefault()
@@ -26,24 +60,18 @@ const ManageStudentsAndClassesPage = () => {
     const trimmedDomain = studentDomain.trim().toLowerCase()
     if (!trimmedUsername) return
     const fullEmail = trimmedUsername.includes("@") ? trimmedUsername : `${trimmedUsername}@${trimmedDomain}`
-    if (!validateEmail(fullEmail)) {
-      return
-    }
+    if (!validateEmail(fullEmail)) return
+
     setStudentLoading(true)
     try {
-      const result = await userService.addStudent(fullEmail)
-      if (result.success && result.user) {
-        setStudents((prev) => [...prev, result.user as User])
-        setStudentUsername("")
-      }
+      await addStudent({ email: fullEmail })
+      const refreshed = await getMyStudents()
+      setStudents(refreshed)
+      setStudentUsername("")
     } finally {
       setStudentLoading(false)
     }
   }
-
-  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
-  const availableStudents = students.filter((student) => !selectedStudentIds.includes(student.id))
-  const selectedStudents = students.filter((student) => selectedStudentIds.includes(student.id))
 
   const handleSelectStudent = (studentId: string) => {
     setSelectedStudentIds((prev) =>
@@ -56,52 +84,39 @@ const ManageStudentsAndClassesPage = () => {
     setSelectedStudentIds((prev) => [...prev, ...allAvailableIds.filter((id) => !prev.includes(id))])
   }
 
-  const generateTurmaName = () => `Turma ${Date.now()}`
-  const [turmaName, setTurmaName] = useState(generateTurmaName())
-  const [turmaColor, setTurmaColor] = useState(generateRandomColor())
-
-  const [confirmedClasses, setConfirmedClasses] = useState<Class[]>([])
-  const [visibleClassStudents, setVisibleClassStudents] = useState<{ [key: string]: boolean }>({})
-
   const toggleClassStudentsVisibility = (classId: string) => {
     setVisibleClassStudents((prev) => ({ ...prev, [classId]: !prev[classId] }))
   }
 
-  const getClassStudents = (classId: string): ClassStudent[] => {
-    return classStudentService.getClassStudentsByClass(classId)
-  }
-
-  const handleConfirmClass = () => {
+  const handleConfirmClass = async () => {
+    if (!selectedCourseId) {
+      alert("Selecione o curso da turma.")
+      return
+    }
     if (selectedStudentIds.length === 0) {
+      alert("Selecione pelo menos um aluno.")
       return
     }
-    if (confirmedClasses.some((cls) => cls.color === turmaColor)) {
-      return
-    }
-    const newClass = classService.addClass({
-      name: turmaName,
-      color: turmaColor,
-      courseId: "",
-      teacherId: "cm6bntysq0005s911c7r7o87g",
-      imageUrl: "",
-    })
-    if (!newClass) {
-      return
-    }
-    selectedStudentIds.forEach((studentId) => {
-      const result = classStudentService.addClassStudent({
-        classId: newClass.id,
-        studentId,
+    setConfirmLoading(true)
+    try {
+      const newClass = await classService.addClass({
+        name: turmaName,
+        color: turmaColor,
+        courseId: selectedCourseId,
       })
-      if (!result) {
-        console.error(`Falha ao adicionar o aluno ${studentId} à turma ${newClass.id}`)
-      }
-    })
-    setConfirmedClasses((prev) => [...prev, newClass])
-    setStudents((prev) => prev.filter((student) => !selectedStudentIds.includes(student.id)))
-    setSelectedStudentIds([])
-    setTurmaName(generateTurmaName())
-    setTurmaColor(generateRandomColor())
+      if (!newClass) return
+
+      await classService.addStudentsToClass(newClass.id, selectedStudentIds)
+
+      const full = await getClassById(newClass.id)
+      if (full) setConfirmedClasses((prev) => [...prev, full])
+
+      setSelectedStudentIds([])
+      setTurmaName(generateTurmaName())
+      setTurmaColor(generateRandomColor())
+    } finally {
+      setConfirmLoading(false)
+    }
   }
 
   return (
@@ -148,128 +163,137 @@ const ManageStudentsAndClassesPage = () => {
             <CardTitle className="text-2xl font-bold">Configurar Turma</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-4">
+            <div className="flex flex-col gap-4 mb-4">
               <div className="flex-1">
-                <Label htmlFor="turmaName">Nome da Turma</Label>
-                <Input id="turmaName" type="text" value={turmaName} onChange={(e) => setTurmaName(e.target.value)} />
+                <Label htmlFor="courseSelect">Curso</Label>
+                <select
+                  id="courseSelect"
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="p-2 border rounded w-full"
+                >
+                  <option value="">-- Selecione um curso --</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="w-32">
-                <Label htmlFor="turmaColor">Cor</Label>
-                <Input id="turmaColor" type="color" value={turmaColor} onChange={(e) => setTurmaColor(e.target.value)} />
+              <div className="flex flex-row items-end gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="turmaName">Nome da Turma</Label>
+                  <Input id="turmaName" type="text" value={turmaName} onChange={(e) => setTurmaName(e.target.value)} />
+                </div>
+                <div className="w-32">
+                  <Label htmlFor="turmaColor">Cor</Label>
+                  <Input id="turmaColor" type="color" value={turmaColor} onChange={(e) => setTurmaColor(e.target.value)} />
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card className="mb-8 flex flex-col w-full">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Turmas Confirmadas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {confirmedClasses.length === 0 ? (
-            <p className="text-gray-500">Nenhuma turma confirmada.</p>
-          ) : (
-            <ul className="space-y-4">
-              {confirmedClasses.map((cls) => (
-                <li key={cls.id} className="border p-4 rounded">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full" style={{ backgroundColor: cls.color }} />
-                      <span className="font-bold">{cls.name}</span>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Turmas Confirmadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {confirmedClasses.length === 0 ? (
+              <p className="text-gray-500">Nenhuma turma confirmada.</p>
+            ) : (
+              <ul className="space-y-4">
+                {confirmedClasses.map((cls) => (
+                  <li key={cls.id} className="border p-4 rounded">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full" style={{ backgroundColor: cls.color ?? "#ccc" }} />
+                        <span className="font-bold">{cls.name}</span>
+                      </div>
+                      <Button onClick={() => toggleClassStudentsVisibility(cls.id)} variant="outline">
+                        {visibleClassStudents[cls.id] ? "Ocultar Alunos" : "Mostrar Alunos"}
+                      </Button>
                     </div>
-                    <Button onClick={() => toggleClassStudentsVisibility(cls.id)} variant="outline">
-                      {visibleClassStudents[cls.id] ? "Ocultar Alunos" : "Mostrar Alunos"}
-                    </Button>
-                  </div>
-                  {visibleClassStudents[cls.id] && (
-                    <div className="mt-4">
-                      <h3 className="font-semibold mb-2">Alunos na Turma</h3>
-                      {getClassStudents(cls.id).length === 0 ? (
-                        <p className="text-gray-500">Nenhum aluno atribuído.</p>
-                      ) : (
-                        <ul className="border p-2 rounded max-h-60 overflow-auto">
-                          {getClassStudents(cls.id).map((cs) => {
-                            const student = userService.getUserById(cs.studentId)
-                            return (
-                              <li key={cs.id} className="p-2 border-b last:border-0">
-                                {student?.email || cs.studentId}
+                    {visibleClassStudents[cls.id] && (
+                      <div className="mt-4">
+                        <h3 className="font-semibold mb-2">Alunos na Turma</h3>
+                        {cls.students.length === 0 ? (
+                          <p className="text-gray-500">Nenhum aluno atribuído.</p>
+                        ) : (
+                          <ul className="border p-2 rounded max-h-60 overflow-auto">
+                            {cls.students.map((s) => (
+                              <li key={s.id} className="p-2 border-b last:border-0">
+                                {s.user.profile?.displayName?.trim() || s.user.email}
                               </li>
-                            )
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
       <div className="flex flex-row gap-4 w-full">
+        <Card className="mb-8 flex flex-col w-full">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-2xl font-bold">Estudantes Disponíveis</CardTitle>
+              <Button onClick={handleSelectAllStudents} variant="outline">
+                Selecionar Todos
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {availableStudents.length === 0 ? (
+              <p className="text-gray-500">Nenhum estudante disponível.</p>
+            ) : (
+              <ul className="border p-2 rounded max-h-60 overflow-auto">
+                {availableStudents.map((student) => (
+                  <li
+                    key={student.id}
+                    className="p-2 cursor-pointer hover:bg-gray-100 border-b last:border-0"
+                    onClick={() => handleSelectStudent(student.id)}
+                  >
+                    {studentLabel(student)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-
-      <Card className="mb-8 flex flex-col w-full">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Estudantes Disponíveis</CardTitle>
-            <Button onClick={handleSelectAllStudents} variant="outline">
-              Selecionar Todos
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {availableStudents.length === 0 ? (
-            <p className="text-gray-500">Todos os estudantes foram selecionados.</p>
-          ) : (
-            <ul className="border p-2 rounded max-h-60 overflow-auto">
-              {availableStudents.map((student) => (
-                <li
-                  key={student.id}
-                  className="p-2 cursor-pointer hover:bg-gray-100 border-b last:border-0"
-                  onClick={() => handleSelectStudent(student.id)}
-                >
-                  {student.email}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mb-8 flex flex-col w-full">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Estudantes Selecionados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {selectedStudents.length === 0 ? (
-            <p className="text-gray-500">Nenhum estudante selecionado.</p>
-          ) : (
-            <ul className="border p-2 rounded max-h-60 overflow-auto">
-              {selectedStudents.map((student) => (
-                <li
-                  key={student.id}
-                  className="p-2 cursor-pointer hover:bg-gray-100 border-b last:border-0"
-                  onClick={() => handleSelectStudent(student.id)}
-                >
-                  {student.email}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-
+        <Card className="mb-8 flex flex-col w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Estudantes Selecionados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedStudents.length === 0 ? (
+              <p className="text-gray-500">Nenhum estudante selecionado.</p>
+            ) : (
+              <ul className="border p-2 rounded max-h-60 overflow-auto">
+                {selectedStudents.map((student) => (
+                  <li
+                    key={student.id}
+                    className="p-2 cursor-pointer hover:bg-gray-100 border-b last:border-0"
+                    onClick={() => handleSelectStudent(student.id)}
+                  >
+                    {studentLabel(student)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-
-      <Button onClick={handleConfirmClass} className="w-full">
-        Confirmar Turma
+      <Button onClick={handleConfirmClass} className="w-full" disabled={confirmLoading}>
+        {confirmLoading ? "A confirmar..." : "Confirmar Turma"}
       </Button>
     </div>
   )
 }
 
 export default ManageStudentsAndClassesPage
-
