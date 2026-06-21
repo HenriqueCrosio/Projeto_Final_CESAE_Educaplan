@@ -118,6 +118,11 @@ getGestaoGroups: async (): Promise<NavGroup[]> => {
         { id: "todosmodulos", href: "/dashboard/cursos/modulos", title: "Todos os módulos" },
         { id: "todostopicos", href: "/dashboard/cursos/topicos", title: "Todos os tópicos" },
       ]),
+      createNavGroup("4", "Avaliação e materiais", "header", [
+        { id: "exercicios", href: "/dashboard/exercicios", title: "Exercícios", description: "Criar e gerir exercícios" },
+        { id: "exames", href: "/dashboard/exames", title: "Exames", description: "Montar exames com exercícios" },
+        { id: "materiais", href: "/dashboard/materiais", title: "Materiais", description: "Anexar materiais a curso/módulo/tópico" },
+      ]),
       ...categoryGroups,
     ];
   },
