@@ -80,13 +80,6 @@ export function NavigationProvider({ tenant, children }: NavigationProviderProps
     }
     setActiveCollapsibleSidebarItem(item)
   }
-  useEffect(() => {
-    console.log("Active Main Sidebar Item:", activeMainSidebarItem);
-    console.log("Last Clicked Sidebar Item:", lastClickedSidebarItem);
-    console.log("Support Bar Groups:", supportBarGroups);
-  }, [activeMainSidebarItem, lastClickedSidebarItem, supportBarGroups]);
-  
-
   return (
     <NavigationContext.Provider
       value={{

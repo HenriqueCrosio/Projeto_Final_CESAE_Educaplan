@@ -2,8 +2,9 @@
 import type { NavigationConfig, NavGroup, NavItem } from "@/types/navigation.types";
 import { NotificationService } from "./data-services/notification.service";
 import { courseService } from "./data-services/course.service";
-import { Course, Enrollment } from "@/types/interfaces";
+import { Course } from "@/types/interfaces";
 import { useCentralStore } from "@/store/central.store";
+import { getMyEnrollments } from "@/actions/enrollment.actions";
 
 const createNavItem = (
   id: string,
@@ -69,10 +70,10 @@ export const NavigationDataService = {
 getGestaoGroups: async (): Promise<NavGroup[]> => {
   const gestaoGroups: NavGroup[] = [
     createNavGroup("1", "Gerir currículo", "header", [
-      { id: "registar", title: "Registar alunos e turmas", href: "/dashboard/gestao/adicionar", description: "Gerencie as disciplinas" },
-      { id: "configurar", title: "Configurar plano de curso", href: "/dashboard/gestao/configurar", description: "Acesse os planos de aula" },
-      { id: "enrolment", title: "Planos de curso", href: "/dashboard/gestao", description: "Acesse o histórico dos planos de aula" },
-      { id: "lesson-plans", title: "Marcação de aulas", href: "/dashboard/gestao/aulas", description: "Acesse o histórico dos planos de aula" },
+      { id: "registar", title: "Registar alunos e turmas", href: "/dashboard/gestao/adicionar", description: "Adicione alunos e crie turmas" },
+      { id: "configurar", title: "Criar matrícula", href: "/dashboard/gestao/configurar", description: "Matricular turmas num curso e definir preços" },
+      { id: "enrolment", title: "Matrículas", href: "/dashboard/gestao", description: "Ver as matrículas criadas" },
+      { id: "lesson-plans", title: "Marcação de aulas", href: "/dashboard/gestao/aulas", description: "Agendar aulas no calendário" },
 
     ]),
   ];
@@ -146,7 +147,7 @@ getGestaoGroups: async (): Promise<NavGroup[]> => {
 
 
 const getEnrollmentGroups = async (): Promise<NavGroup[]> => {
-  const enrollments: Enrollment[] = useCentralStore.getState().getData("enrollments") || [];
+  const enrollments = await getMyEnrollments();
   const now = new Date();
 
   const upcoming = enrollments.filter((enr) => new Date(enr.startDate) > now);
@@ -156,11 +157,11 @@ const getEnrollmentGroups = async (): Promise<NavGroup[]> => {
       new Date(enr.endDate) >= now
   );
 
-  const mapToNavItem = (enr: Enrollment) => ({
+  const mapToNavItem = (enr: (typeof enrollments)[number]) => ({
     id: enr.id,
-    title: enr.name,
-    href: `/dashboard/gestao/planos/${enr.slug}`,
-    description: enr.enrollmentYear ? String(enr.enrollmentYear) : "",
+    title: `${enr.course.name} — ${enr.class.name}`,
+    href: `/dashboard/gestao/planos/${enr.id}`,
+    description: new Date(enr.startDate).toLocaleDateString("pt-PT"),
   });
 
   const upcomingItems = upcoming.map(mapToNavItem);

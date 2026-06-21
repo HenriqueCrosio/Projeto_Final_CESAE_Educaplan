@@ -1,12 +1,11 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { usePathname } from "next/navigation"
-import { enrollmentDataService, EnrollmentDetails } from "@/services/wrapper-services/enrollment-data.wrapper-service"
-import { topicService } from "@/services/data-services/topic.service"
-import { generateId, minutesToHours } from "@/lib/utils/general.utils" // Use your existing utility
-import { CourseStatusEnum, Lesson, Module, Topic } from "@/types/interfaces"
-import { useCentralStore } from "@/store/central.store"
+import { useParams } from "next/navigation"
+import { getEnrollmentById } from "@/actions/enrollment.actions"
+import { formatCurrency } from "@/lib/utils"
+
+type EnrollmentDetail = Awaited<ReturnType<typeof getEnrollmentById>>
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
@@ -17,238 +16,94 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
   )
 }
 
-function Button(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      {...props}
-      className={`inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium
-      text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 
-       ${props.className ?? ""}`}
-    >
-      {props.children}
-    </button>
-  )
+const statusLabel: Record<string, string> = {
+  PENDING: "Pendente",
+  ACTIVE: "Ativa",
+  COMPLETED: "Concluída",
+  CANCELLED: "Cancelada",
 }
 
-export default function EnrollmentPage() {
-  const pathname = usePathname()
-  const slug = pathname?.split("/").pop()
+export default function EnrollmentDetailPage() {
+  // A pasta chama-se [slug] por legado, mas o parâmetro é o id da matrícula.
+  const params = useParams<{ slug: string }>()
+  const id = params?.slug
 
-  const [enrollmentDetails, setEnrollmentDetails] = useState<EnrollmentDetails | null>(null)
-  const [allTopics, setAllTopics] = useState<Topic[]>([])
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null)
-
-  const data = useCentralStore((state) => state.data)
+  const [detail, setDetail] = useState<EnrollmentDetail>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!slug) return
+    if (!id) return
+    getEnrollmentById(id)
+      .then(setDetail)
+      .finally(() => setLoading(false))
+  }, [id])
 
-    const details = enrollmentDataService.getEnrollmentDetailsBySlug(slug)
-    setEnrollmentDetails(details)
-
-    topicService.getTopicsByTeacher().then((topics) => setAllTopics(topics as unknown as Topic[]))
-  }, [slug, data])
-
-  const handleAddLesson = async () => {
-    if (!selectedModule) return
-
-    const store = useCentralStore.getState()
-    const existingModuleLessons = store.data.moduleLessons.filter(
-      (ml) => ml.moduleId === selectedModule.id,
-    )
-    const lessonNumber = existingModuleLessons.length + 1
-    const lessonName = `Aula ${lessonNumber}`
-
-    const newLessonId = generateId()
-    const newLesson: Lesson = {
-      id: newLessonId,
-      name: lessonName,
-      slug: lessonName.toLowerCase().replace(/\s+/g, "-"),
-      order: 0,
-      duration: 0,
-      teacherId: "cm6bntysq0005s911c7r7o87g",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      status: CourseStatusEnum.DRAFT,
-      lectured: false,
-      description: "",
-      topics: [],
-    }
-
-    store.addData("lessons", newLesson)
-    // Associação via moduleLessons é tratada no fluxo legado de matrícula (Enrollment ainda não migrado).
-
-    setSelectedModule(null)
+  if (loading) {
+    return <div className="p-4"><h1 className="text-xl">A carregar detalhes da matrícula...</h1></div>
   }
 
-  const handleUpdateLessonTime = (lessonId: string, newDuration: number) => {
-    enrollmentDataService.adjustLessonDuration(lessonId, newDuration)
+  if (!detail) {
+    return <div className="p-4"><h1 className="text-xl">Matrícula não encontrada.</h1></div>
   }
 
-  const handleRemoveLesson = (lessonId: string) => {
-    enrollmentDataService.deleteLesson(lessonId)
-  }
-
-  const handleAddTopicToLesson = (lessonId: string, topicId: string) => {
-    enrollmentDataService.addTopicsToLesson(lessonId, [topicId])
-  }
-
-  const handleRemoveTopicFromLesson = (lessonId: string, topicId: string) => {
-    enrollmentDataService.removeTopicsFromLesson(lessonId, [topicId])
-  }
-
-  if (!enrollmentDetails) {
-    return (
-      <div className="p-4">
-        <h1 className="text-xl">A carregar detalhes de matrícula...</h1>
-      </div>
-    )
-  }
-
-  const { enrollment, modules, lessons, classes, users, moduleLessons } = enrollmentDetails
+  const { enrollment, priceByModule } = detail
+  const { course, class: klass } = enrollment
 
   return (
     <div className="p-4">
       <Card>
-        <h1 className="text-2xl font-bold">Matricula: {enrollment.name}</h1>
-        <p className="text-gray-600 mb-4">{enrollment.teacherId}</p>
+        <div className="flex justify-between items-start">
+          <h1 className="text-2xl font-bold">{course.name}</h1>
+          <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+            {statusLabel[enrollment.status] ?? enrollment.status}
+          </span>
+        </div>
+        <p className="text-gray-600 mt-1">Turma: {klass.name}</p>
         <p className="text-gray-600">
-          Data de início: {new Date(enrollment.startDate).toLocaleDateString()} - Data de fim:{" "}
-          {new Date(enrollment.endDate).toLocaleDateString()}
+          {new Date(enrollment.startDate).toLocaleDateString("pt-PT")} —{" "}
+          {new Date(enrollment.endDate).toLocaleDateString("pt-PT")}
+        </p>
+        <p className="text-gray-900 font-semibold mt-2">
+          Valor a receber: {formatCurrency(enrollment.totalPrice || 0)}
         </p>
       </Card>
 
-      <Card title="Turmas">
-        {classes && classes.length > 0 ? (
-          classes.map((cls) => (
-            <div key={cls.id} className="mb-2">
-              <h3 className="font-semibold">{cls.name}</h3>
-              <p>{cls.description}</p>
-            </div>
-          ))
+      <Card title="Módulos e preços">
+        {course.modules.length === 0 ? (
+          <p className="text-gray-500 italic">Este curso não tem módulos.</p>
         ) : (
-          <p>Não foram encontradas turmas.</p>
+          <ul className="space-y-2">
+            {course.modules.map((mod) => {
+              const price = priceByModule[mod.id]
+              const hourly = price?.hourlyRate ?? 0
+              const subtotal = hourly * (mod.totalHours || 0)
+              return (
+                <li key={mod.id} className="border rounded p-3">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{mod.name}</span>
+                    <span className="text-sm text-gray-600">{mod.totalHours ?? 0} h</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Preço/hora: {formatCurrency(hourly)} · Subtotal: {formatCurrency(subtotal)}
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </Card>
 
-      <Card title="Módulos">
-        {modules.length === 0 ? (
-          <p>Não existem módulos disponíveis de momento.</p>
+      <Card title="Alunos da turma">
+        {klass.students.length === 0 ? (
+          <p className="text-gray-500 italic">Nenhum aluno na turma.</p>
         ) : (
-          modules.map((mod) => {
-            const mLessons = moduleLessons.filter((ml) => ml.moduleId === mod.id)
-            const lessonsForModule = lessons.filter((lsn) =>
-              mLessons.some((ml) => ml.lessonId === lsn.id),
-            )
-
-            return (
-              <div key={mod.id} className="mb-6 border p-3 rounded">
-                <h3 className="text-xl font-bold">
-                  {mod.name} (Slug: {mod.slug})
-                </h3>
-                <p className="text-sm mb-2">Categoria: {mod.category}</p>
-                <p className="text-sm mb-4">
-                  : Horas <strong>{minutesToHours(mod.totalMinutes).toFixed(2)}</strong>
-                </p>
-
-                <div className="space-y-2">
-                  {lessonsForModule.length > 0 ? (
-                    lessonsForModule.map((lsn) => (
-                      <div key={lsn.id} className="border rounded p-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold">{lsn.name}</h4>
-                          <Button onClick={() => handleRemoveLesson(lsn.id)}>Remover</Button>
-                        </div>
-                        <p className="text-sm text-gray-600">Duração: {lsn.duration ?? 0} minutos</p>
-
-                        <div className="flex space-x-2 mt-2">
-                          <input
-                            type="number"
-                            min={0}
-                            defaultValue={lsn.duration ?? 0}
-                            onBlur={(e) => {
-                              const newValue = parseInt(e.target.value, 10)
-                              handleUpdateLessonTime(lsn.id, newValue)
-                            }}
-                            className="border rounded px-2 py-1 w-24"
-                          />
-                          <p className="text-sm text-gray-500 self-center">← Ajustar duração</p>
-                        </div>
-
-                        <div className="mt-2">
-                          <h5 className="text-sm font-medium">Tópicos:</h5>
-                          {lsn.topics && lsn.topics.length > 0 ? (
-                            <ul className="list-disc list-inside">
-                              {lsn.topics.map((t: Topic) => (
-                                <li key={t.id} className="flex justify-between">
-                                  <span>{t.name}</span>
-                                  <Button
-                                    className="bg-red-300 hover:bg-red-500"
-                                    onClick={() => handleRemoveTopicFromLesson(lsn.id, t.id)}
-                                  >
-                                    Remover
-                                  </Button>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-gray-500 italic">Não existem tópicos de momento.</p>
-                          )}
-                          <div className="mt-2">
-                            <select
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleAddTopicToLesson(lsn.id, e.target.value)
-                                  e.target.value = ""
-                                }
-                              }}
-                              className="border rounded px-2 py-1"
-                            >
-                              <option value="">Adicionar Tópicos...</option>
-                              {allTopics.map((topic) => (
-                                <option key={topic.id} value={topic.id}>
-                                  {topic.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 italic">Não existem aulas para já.</p>
-                  )}
-                </div>
-
-                <div className="mt-4 p-3 bg-gray-50 rounded">
-                  <h4 className="font-semibold text-sm mb-2">Adicionar uma aula a {mod.name}</h4>
-                  <Button
-                    className="bg-gray-900"
-                    onClick={() => {
-                      setSelectedModule(mod)
-                      handleAddLesson()
-                    }}
-                  >
-                    + Adicionar nova aula
-                  </Button>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </Card>
-
-      <Card title="Students in this Enrollment">
-        {users && users.length > 0 ? (
           <ul className="list-disc list-inside">
-            {users.map((u) => (
-              <li key={u.id}>
-                {u.profile?.firstName} {u.profile?.lastName} ({u.email})
+            {klass.students.map((s) => (
+              <li key={s.id}>
+                {s.user.profile?.displayName?.trim() || s.user.email}
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="text-gray-500 italic">Não foram encontrados alunos de momento.</p>
         )}
       </Card>
     </div>

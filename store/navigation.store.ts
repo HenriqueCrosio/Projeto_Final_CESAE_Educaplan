@@ -71,6 +71,14 @@ export const useNavigationStore = create<NavigationState>()(
         set({ topNav: config.topNav, bottomNav: config.bottomNav });
       },
     }),
-    { name: "navigation-storage" }
+    {
+      name: "navigation-storage",
+      // Bump quando a forma/labels do menu mudarem: descarta caches antigos no browser.
+      version: 1,
+      // Persistir APENAS preferências de UI. topNav/bottomNav/supportBarGroups são
+      // dados derivados (rótulos, itens vindos do Postgres) e têm de ser sempre
+      // recalculados — persistir isso causava menu/labels obsoletos após mudanças.
+      partialize: (state) => ({ isSecondaryNavCollapsed: state.isSecondaryNavCollapsed }),
+    }
   )
 );

@@ -5,27 +5,19 @@ import React, { useState, useEffect, FormEvent } from "react";
 
 import { courseService } from "@/services/data-services/course.service";
 import { courseWrapperService } from "@/services/wrapper-services/course.wrapper-service";
-import { enrollmentWrapperService } from "@/services/wrapper-services/enrollment.wrapper-service";
-import { moduleAssignmentService } from "@/services/data-services/assignment.service";
 import { classService } from "@/services/data-services/class.service";
+import { createEnrollments } from "@/actions/enrollment.actions";
 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, generateClassName } from "@/lib/utils";
-
-const generateEnrollmentName = (courseName: string): string => {
-  const year = new Date().getFullYear();
-  return `${courseName} - Enrollment 1/${year}`;
-};
+import { formatCurrency } from "@/lib/utils";
 
 const EnrollmentPage = () => {
-
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
-  const [enrollmentName, setEnrollmentName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -36,6 +28,7 @@ const EnrollmentPage = () => {
   const [modulePrices, setModulePrices] = useState<{ [moduleId: string]: number }>({});
 
   const [totalPrice, setTotalPrice] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -51,7 +44,6 @@ const EnrollmentPage = () => {
         const courseDetails = await courseWrapperService.getCourseWithModules(selectedCourseId);
         if (courseDetails) {
           setSelectedCourse(courseDetails);
-          setEnrollmentName(generateEnrollmentName(courseDetails.name));
           setModules(courseDetails.modules || []);
           const defaultPrices: { [moduleId: string]: number } = {};
           courseDetails.modules?.forEach((mod: any) => {
@@ -61,7 +53,8 @@ const EnrollmentPage = () => {
         }
       };
       fetchCourseDetails();
-      classService.getClassesByTeacher().then((allClasses) => setClasses(allClasses));
+      // Só as turmas deste curso podem ser matriculadas nele.
+      classService.getClassesByCourse(selectedCourseId).then((c) => setClasses(c));
       setSelectedClassIds([]);
     } else {
       setSelectedCourse(null);
@@ -74,17 +67,12 @@ const EnrollmentPage = () => {
     let priceSum = 0;
     const numClasses = selectedClassIds.length;
     modules.forEach((mod) => {
-      const hours = mod.totalMinutes / 60;
+      const hours = mod.totalHours || 0;
       const pricePerHour = modulePrices[mod.id] || 0;
       priceSum += pricePerHour * hours * numClasses;
     });
     setTotalPrice(priceSum);
   }, [modulePrices, selectedClassIds, modules]);
-
-
-  const handleCourseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCourseId(e.target.value);
-  };
 
   const handleModulePriceChange = (moduleId: string, priceEuros: number) => {
     const priceInCents = Math.round(priceEuros * 100);
@@ -93,60 +81,28 @@ const EnrollmentPage = () => {
 
   const handleCreateEnrollment = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedCourseId) {
-      alert("Selecione um curso.");
-      return;
+    if (!selectedCourseId) return alert("Selecione um curso.");
+    if (selectedClassIds.length === 0) return alert("Selecione pelo menos uma turma.");
+    if (!startDate || !endDate) return alert("Defina as datas de início e término.");
+
+    setSubmitting(true);
+    try {
+      const res = await createEnrollments({
+        courseId: selectedCourseId,
+        classIds: selectedClassIds,
+        startDate,
+        endDate,
+        modulePrices,
+        currency: "EUR",
+      });
+      alert(`${res.count} matrícula(s) criada(s) com sucesso.`);
+      setSelectedClassIds([]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Falha ao criar as matrículas.");
+    } finally {
+      setSubmitting(false);
     }
-    if (selectedClassIds.length === 0) {
-      alert("Selecione pelo menos uma turma para o enrollment.");
-      return;
-    }
-    if (!startDate || !endDate) {
-      alert("Defina as datas de início e término.");
-      return;
-    }
-  
-    const teacherId = "cm6bntysq0005s911c7r7o87g";
-    const currentYear = new Date().getFullYear();
-    
-    const renamedClasses = await Promise.all(
-      selectedClassIds.map(async (classId, index) => {
-        const newName = generateClassName(index);
-        await classService.updateClassName(classId, newName);
-        return classId;
-      })
-    );
-  
-    const enrollmentData = {
-      name: enrollmentName,
-      courseId: selectedCourseId,
-      teacherId,
-      createdBy: teacherId,
-      classIds: renamedClasses,
-      enrollmentYear: currentYear,
-      totalPrice,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-    };
-  
-    const newEnrollment = enrollmentWrapperService.createEnrollment(enrollmentData);
-    if (!newEnrollment) {
-      return;
-    }
-  
-    Object.entries(modulePrices).forEach(([moduleId, pricePerHour]) => {
-      if (pricePerHour > 0) {
-        moduleAssignmentService.addModuleAssignment({
-          moduleId,
-          enrollementId: newEnrollment.id,
-          pricePerHour,
-          teacherId,
-          currency: "EUR",
-        });
-      }
-    });
   };
-  
 
   return (
     <div className="p-8 space-y-8">
@@ -157,7 +113,7 @@ const EnrollmentPage = () => {
           <select
             id="courseSelect"
             value={selectedCourseId}
-            onChange={handleCourseChange}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
             className="p-2 border rounded w-full"
           >
             <option value="">-- Selecione um curso --</option>
@@ -173,35 +129,19 @@ const EnrollmentPage = () => {
           <>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Identificação da Matrícla</Label>
-                <Input
-                  type="text"
-                  value={enrollmentName}
-                  onChange={(e) => setEnrollmentName(e.target.value)}
-                />
-              </div>
-              <div>
                 <Label>Data de Início</Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div>
                 <Label>Data Final</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </div>
 
             <div>
-              <Label>Turmas Disponíveis (todas as turmas do sistema)</Label>
+              <Label>Turmas do Curso</Label>
               {classes.length === 0 ? (
-                <p className="text-gray-500">Nenhuma turma disponível.</p>
+                <p className="text-gray-500">Nenhuma turma criada para este curso.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {classes.map((cls) => {
@@ -221,9 +161,7 @@ const EnrollmentPage = () => {
                         }
                       >
                         <h3 className="font-bold">{cls.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          Alunos: {studentCount}
-                        </p>
+                        <p className="text-sm text-gray-600">Alunos: {studentCount}</p>
                       </div>
                     );
                   })}
@@ -240,34 +178,20 @@ const EnrollmentPage = () => {
                   {modules.map((mod) => (
                     <div key={mod.id} className="border p-4 rounded">
                       <p className="font-bold">{mod.name}</p>
-                      <p>
-                        Duração: {mod.totalMinutes} minutos (≈{" "}
-                        {(mod.totalMinutes / 60).toFixed(2)} horas)
-                      </p>
+                      <p>Duração: {mod.totalHours ?? 0} horas</p>
                       <div className="flex items-center gap-2">
-                        <Label htmlFor={`price-${mod.id}`}>
-                          Preço por Hora (euros):
-                        </Label>
+                        <Label htmlFor={`price-${mod.id}`}>Preço por Hora (euros):</Label>
                         <Input
                           id={`price-${mod.id}`}
                           type="number"
                           value={modulePrices[mod.id] ? modulePrices[mod.id] / 100 : 0}
-                          onChange={(e) =>
-                            handleModulePriceChange(mod.id, Number(e.target.value))
-                          }
+                          onChange={(e) => handleModulePriceChange(mod.id, Number(e.target.value))}
                           className="w-24"
                         />
                       </div>
                       <p>
-                        Custo deste módulo:{" "}
-                        {formatCurrency(
-                          (modulePrices[mod.id] || 0) *
-                            (mod.totalMinutes / 60) *
-                            selectedClassIds.length
-                        )}
-                      </p>
-                      <p>
-                        Número de Aulas: {mod.lessonCount || "N/A"}
+                        Custo deste módulo (por turma):{" "}
+                        {formatCurrency((modulePrices[mod.id] || 0) * (mod.totalHours || 0))}
                       </p>
                     </div>
                   ))}
@@ -276,16 +200,14 @@ const EnrollmentPage = () => {
             </div>
 
             <div>
-              <Label>Total a Pagar</Label>
-              <p className="font-bold text-xl">
-                {formatCurrency(totalPrice)}
-              </p>
+              <Label>Total a Pagar ({selectedClassIds.length} turma(s))</Label>
+              <p className="font-bold text-xl">{formatCurrency(totalPrice)}</p>
             </div>
           </>
         )}
 
-        <Button type="submit" className="mt-4">
-          Criar Enrollment
+        <Button type="submit" className="mt-4" disabled={submitting}>
+          {submitting ? "A criar..." : "Criar Matrículas"}
         </Button>
       </form>
     </div>
