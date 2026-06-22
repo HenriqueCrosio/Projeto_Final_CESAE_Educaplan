@@ -131,10 +131,10 @@ getGestaoGroups: async (): Promise<NavGroup[]> => {
   getClassesGroups: async (): Promise<NavGroup[]> => {
     // Grupo com opções fixas de navegação para as aulas
     const headerGroup = createNavGroup("1", "Integração de Sistemas de Informação", "header", [
-      { id: "1", title: "Planeamento do módulo", href: "/dashboard/statistics", description: "Visualize estatísticas importantes" },
-      { id: "2", title: "Tópicos e material de estudo", href: "/dashboard/reports", description: "Acesse relatórios detalhados" },
-      { id: "3", title: "Exercícios e exames", href: "/dashboard/exams", description: "Gerencie exercícios e exames" },
-      { id: "4", title: "Calendário da turma", href: "/dashboard/calendar", description: "Veja o calendário da turma" },
+      { id: "1", title: "Planeamento do módulo", href: "/dashboard/cursos/modulos", description: "Visualize estatísticas importantes" },
+      { id: "2", title: "Tópicos e material de estudo", href: "/dashboard/cursos/topicos", description: "Acesse relatórios detalhados" },
+      { id: "3", title: "Exercícios e exames", href: "/dashboard/exames", description: "Gerencie exercícios e exames" },
+      { id: "4", title: "Calendário da turma", href: "/dashboard/calendario", description: "Veja o calendário da turma" },
     ]);
 
     // Grupo dinâmico: aulas de hoje (a partir do momento atual até à última do dia)
