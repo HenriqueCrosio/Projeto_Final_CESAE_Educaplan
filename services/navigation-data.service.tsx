@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NavigationConfig, NavGroup, NavItem } from "@/types/navigation.types";
-import { NotificationService } from "./data-services/notification.service";
+import { getRecentNotifications } from "@/actions/notification.actions";
 import { courseService } from "./data-services/course.service";
 import { Course } from "@/types/interfaces";
 import { useCentralStore } from "@/store/central.store";
@@ -54,13 +54,18 @@ export const NavigationDataService = {
   },
 
   getDashboardGroups: async (): Promise<NavGroup[]> => {
-    const notifications = NotificationService.getNotifications();
-
-    const notificationItems = [...notifications].reverse().map((notif) => ({
+    let notificationItems: { id: string; title: string; description: string }[] = [];
+    try {
+      const notifications = await getRecentNotifications(10);
+      notificationItems = notifications.map((notif) => ({
         id: notif.id,
-        title: notif.message,
-        description: "Clique para ver mais detalhes",
-    }));
+        title: notif.title || notif.message || "Notificação",
+        description: notif.message || "Clique para ver mais detalhes",
+      }));
+    } catch {
+      // Sessão sem professor → painel vazio.
+      notificationItems = [];
+    }
 
     return [
         createNavGroup("2", "Atividade Recente", "body", notificationItems),

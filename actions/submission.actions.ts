@@ -108,6 +108,8 @@ export async function submitExam(examId: string, answers: AnswerInput[]) {
     },
     select: {
       id: true,
+      name: true,
+      ownerId: true,
       organizationId: true,
       module: { select: { id: true } },
       exercises: {
@@ -180,7 +182,7 @@ export async function submitExam(examId: string, answers: AnswerInput[]) {
 
   const status = hasManual ? "SUBMITTED" : "GRADED";
 
-  return prisma.examSubmission.create({
+  const submission = await prisma.examSubmission.create({
     data: {
       examId,
       studentId,
@@ -194,4 +196,27 @@ export async function submitExam(examId: string, answers: AnswerInput[]) {
     },
     select: { id: true, status: true, score: true },
   });
+
+  // Notifica o professor dono do exame (best-effort — não falha a submissão).
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { studentId: true, user: { select: { email: true, profile: { select: { displayName: true } } } } },
+    });
+    const who = student?.user.profile?.displayName || student?.user.email || student?.studentId || "Um aluno";
+    await prisma.notification.create({
+      data: {
+        type: "OTHER",
+        title: "Nova submissão de exame",
+        message: `${who} submeteu "${exam.name}".`,
+        teacherId: exam.ownerId,
+        organizationId: exam.organizationId,
+        seen: false,
+      },
+    });
+  } catch {
+    // Ignora falhas de notificação — não devem impedir o registo da submissão.
+  }
+
+  return submission;
 }

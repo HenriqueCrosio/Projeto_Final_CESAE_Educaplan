@@ -1,35 +1,59 @@
+"use server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
+import { getSessionContext, getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
 import {
   createNotificationSchema,
   CreateNotification,
 } from "@/schemas/notification.schemas";
 
-// Get Unseen Notifications
+// O sino renderiza para qualquer sessão; estas leituras devolvem [] (sem lançar)
+// quando o utilizador não é professor, evitando ruído de "Unauthorized" no log.
+async function teacherIdOrNull(): Promise<string | null> {
+  try {
+    const ctx = await getSessionContext();
+    if (ctx.role !== "teacher") return null;
+  } catch {
+    return null; // sem sessão
+  }
+  return getCurrentTeacherId();
+}
+
+// Notificações não vistas do professor autenticado.
 export async function getUnseenNotifications() {
-  const teacherId = await getCurrentTeacherId();
+  const teacherId = await teacherIdOrNull();
+  if (!teacherId) return [];
 
   return await prisma.notification.findMany({
-    where: {
-      teacherId: teacherId,
-      seen: false,
-    },
+    where: { teacherId, seen: false },
     orderBy: { createdAt: "desc" },
   });
 }
 
-// Mark Notifications as Seen
+// Notificações recentes (vistas ou não) — alimenta o painel "Atividade Recente".
+export async function getRecentNotifications(limit = 10) {
+  const teacherId = await teacherIdOrNull();
+  if (!teacherId) return [];
+
+  return await prisma.notification.findMany({
+    where: { teacherId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+// Marca todas as não vistas como vistas.
 export async function markNotificationsAsSeen() {
-  const teacherId = await getCurrentTeacherId();
+  const teacherId = await teacherIdOrNull();
+  if (!teacherId) return { count: 0 };
 
   return await prisma.notification.updateMany({
-    where: { teacherId: teacherId, seen: false },
+    where: { teacherId, seen: false },
     data: { seen: true },
   });
 }
 
-// Create a Notification
+// Cria uma notificação para o próprio professor (uso administrativo/manual).
 export async function createNotification(data: Omit<CreateNotification, "teacherId">) {
   const teacherId = await getCurrentTeacherId();
   const organizationId = await getCurrentOrganizationId();
@@ -38,7 +62,7 @@ export async function createNotification(data: Omit<CreateNotification, "teacher
   return await prisma.notification.create({ data: { ...validatedData, organizationId } });
 }
 
-// Delete a Notification (Ensures only the owner can delete)
+// Apaga uma notificação (só o dono).
 export async function deleteNotification(id: string) {
   const teacherId = await getCurrentTeacherId();
 
