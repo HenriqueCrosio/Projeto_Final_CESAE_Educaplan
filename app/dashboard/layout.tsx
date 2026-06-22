@@ -5,17 +5,14 @@ import DesktopNavigationLayout from "@/components/dashboard/navigation/desktop/d
 import { NavigationProvider } from "@/providers/navigation-provider"
 import { useAuthStore } from "@/store/auth.store"
 import { LoginButton } from "@/components/buttons/login-button"
-import { useCentralStore } from "@/store/central.store"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function DashboardLayout({ children }: Readonly<{ children: ReactNode }>) {
   const { teacherId, isLoading, fetchTeacherId } = useAuthStore()
-  const loadInitialData = useCentralStore((state) => state.loadInitialData)
 
   useEffect(() => {
     fetchTeacherId()
-    loadInitialData()
-  }, [fetchTeacherId, loadInitialData])
+  }, [fetchTeacherId])
     
 
   if (isLoading) {

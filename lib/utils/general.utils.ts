@@ -1,16 +1,3 @@
-
-
-export const loadMockData = async (fileName: string) => {
-  try {
-    const response = await fetch(`/database/${fileName}.data.json`);
-    if (!response.ok) throw new Error("Failed to load mock data");
-    return await response.json();
-  } catch (error) {
-    console.error("Error loading mock data:", error);
-    return [];
-  }
-};
-
 export const generateId = (): string => {
   return crypto.randomUUID();
 };
