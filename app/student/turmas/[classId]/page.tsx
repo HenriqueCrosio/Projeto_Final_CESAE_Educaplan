@@ -93,24 +93,36 @@ export default async function StudentClassDetail({
             </p>
           ) : (
             <ul className="space-y-2">
-              {exams.map((e) => (
-                <li key={e.id} className="rounded-xl border bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{e.name}</p>
-                      <p className="truncate text-xs text-gray-400">
-                        {EXAM_TYPE_LABEL[e.type] ?? e.type} · {e.module.name}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right text-sm text-gray-600">
-                      <p>{df.format(new Date(e.date))}</p>
-                      <p className="text-xs text-gray-400">
-                        {e.duration} min · {e.maxScore} pts
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              ))}
+              {exams.map((e) => {
+                const sub = e.submissions[0];
+                const badge =
+                  sub?.status === "GRADED"
+                    ? { label: `Avaliado · ${sub.score ?? 0} pts`, cls: "bg-green-100 text-green-800" }
+                    : sub?.status
+                    ? { label: "Submetido", cls: "bg-amber-100 text-amber-800" }
+                    : { label: "Por fazer", cls: "bg-blue-100 text-blue-800" };
+                return (
+                  <li key={e.id} className="rounded-xl border bg-white shadow-sm transition hover:border-blue-300 hover:shadow">
+                    <a href={`/student/exames/${e.id}`} className="flex items-center justify-between gap-3 p-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{e.name}</p>
+                        <p className="truncate text-xs text-gray-400">
+                          {EXAM_TYPE_LABEL[e.type] ?? e.type} · {e.module.name}
+                        </p>
+                        <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <div className="shrink-0 text-right text-sm text-gray-600">
+                        <p>{df.format(new Date(e.date))}</p>
+                        <p className="text-xs text-gray-400">
+                          {e.duration} min · {e.maxScore} pts
+                        </p>
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

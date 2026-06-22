@@ -78,7 +78,7 @@ export async function getMyClassDetail(classId: string) {
     orderBy: { dateTime: "asc" },
   });
 
-  // Exames dos módulos do curso da turma.
+  // Exames dos módulos do curso da turma (+ a submissão deste aluno, se houver).
   const exams = moduleIds.length
     ? await prisma.exam.findMany({
         where: { moduleId: { in: moduleIds } },
@@ -90,6 +90,11 @@ export async function getMyClassDetail(classId: string) {
           duration: true,
           maxScore: true,
           module: { select: { id: true, name: true } },
+          submissions: {
+            where: { studentId },
+            select: { status: true, score: true },
+            take: 1,
+          },
         },
         orderBy: { date: "asc" },
       })
