@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
 import type { ExerciseTypeEnum, DifficultyLevelEnum } from "@prisma/client";
 
+export interface ExerciseOptionInput {
+  text: string;
+  isCorrect: boolean;
+}
+
 export interface CreateExerciseInput {
   title: string;
   description?: string | null;
@@ -14,6 +19,35 @@ export interface CreateExerciseInput {
   timeLimit?: number | null;
   topicId?: string | null;
   isTeamExercise?: boolean;
+  // Gabarito (só MC/TF). Opcional ao criar — pode ser definido depois.
+  options?: ExerciseOptionInput[];
+}
+
+/** Tipos cujo gabarito é auto-corrigível por opções (S3: resposta única). */
+function usesOptions(type: ExerciseTypeEnum) {
+  return type === "MULTIPLE_CHOICE" || type === "TRUE_FALSE";
+}
+
+/**
+ * Normaliza e valida o gabarito. Regra do S3: ou não há opções (rascunho, sem
+ * auto-correção), ou há >=2 opções com EXATAMENTE 1 correta. Tipos sem opções
+ * não podem ter gabarito. Devolve as opções limpas (texto aparado, vazias fora).
+ */
+function normalizeOptions(type: ExerciseTypeEnum, options: ExerciseOptionInput[] = []): ExerciseOptionInput[] {
+  const clean = options
+    .map((o) => ({ text: o.text?.toString().trim() ?? "", isCorrect: !!o.isCorrect }))
+    .filter((o) => o.text.length > 0);
+
+  if (!usesOptions(type)) {
+    if (clean.length) throw new Error("Este tipo de exercício não usa gabarito de opções.");
+    return [];
+  }
+  if (clean.length === 0) return []; // sem gabarito ainda
+  if (clean.length < 2) throw new Error("São necessárias pelo menos 2 opções.");
+  if (clean.filter((o) => o.isCorrect).length !== 1) {
+    throw new Error("Marque exatamente 1 opção correta.");
+  }
+  return clean;
 }
 
 export async function createExercise(input: CreateExerciseInput) {
@@ -33,6 +67,8 @@ export async function createExercise(input: CreateExerciseInput) {
     if (!topic) throw new Error("Tópico inválido ou sem permissão.");
   }
 
+  const options = normalizeOptions(input.type, input.options);
+
   return prisma.exercise.create({
     data: {
       title,
@@ -47,8 +83,43 @@ export async function createExercise(input: CreateExerciseInput) {
       creatorId: teacherId,
       ownerId: teacherId,
       organizationId,
+      options: options.length
+        ? { create: options.map((o, i) => ({ text: o.text, isCorrect: o.isCorrect, order: i, organizationId })) }
+        : undefined,
     },
   });
+}
+
+/**
+ * Substitui o gabarito de um exercício (delete + recreate). Escopo owner+org.
+ * NOTA: como Answer.selectedOptionId é SET NULL ao apagar a opção, editar o
+ * gabarito depois de existirem submissões anula a escolha desses alunos —
+ * o fluxo esperado é definir o gabarito ANTES de o exame ser feito.
+ */
+export async function setExerciseOptions(exerciseId: string, options: ExerciseOptionInput[]) {
+  const teacherId = await getCurrentTeacherId();
+  const organizationId = await getCurrentOrganizationId();
+
+  const exercise = await prisma.exercise.findFirst({
+    where: { id: exerciseId, organizationId, ownerId: teacherId },
+    select: { id: true, type: true },
+  });
+  if (!exercise) throw new Error("Exercício inválido ou sem permissão.");
+
+  const clean = normalizeOptions(exercise.type, options);
+
+  await prisma.$transaction([
+    prisma.exerciseOption.deleteMany({ where: { exerciseId } }),
+    ...(clean.length
+      ? [
+          prisma.exerciseOption.createMany({
+            data: clean.map((o, i) => ({ exerciseId, text: o.text, isCorrect: o.isCorrect, order: i, organizationId })),
+          }),
+        ]
+      : []),
+  ]);
+
+  return { count: clean.length };
 }
 
 export async function getMyExercises() {
@@ -56,7 +127,10 @@ export async function getMyExercises() {
   const organizationId = await getCurrentOrganizationId();
   return prisma.exercise.findMany({
     where: { organizationId, ownerId: teacherId },
-    include: { topic: { select: { name: true } } },
+    include: {
+      topic: { select: { name: true } },
+      options: { orderBy: { order: "asc" }, select: { id: true, text: true, isCorrect: true, order: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -65,7 +139,10 @@ export async function getExerciseById(id: string) {
   const organizationId = await getCurrentOrganizationId();
   return prisma.exercise.findFirst({
     where: { id, organizationId },
-    include: { topic: { select: { name: true } } },
+    include: {
+      topic: { select: { name: true } },
+      options: { orderBy: { order: "asc" }, select: { id: true, text: true, isCorrect: true, order: true } },
+    },
   });
 }
 

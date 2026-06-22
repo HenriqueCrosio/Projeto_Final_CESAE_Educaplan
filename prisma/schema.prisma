@@ -33,7 +33,9 @@ model Organization {
   topics            Topic[]
   objectives        Objective[]
   exercises         Exercise[]
+  exerciseOptions   ExerciseOption[]
   exams             Exam[]
+  examSubmissions   ExamSubmission[]
   materials         Material[]
   moduleAssignments ModuleAssignment[]
   classes           Class[]
@@ -188,6 +190,8 @@ model Teacher {
   createdMaterial Material[] @relation("MaterialCreator")
   ownedMaterial   Material[] @relation("MaterialOwner")
 
+  gradedSubmissions ExamSubmission[] @relation("SubmissionGrader")
+
   addedStudents Student[] @relation("AddedStudents")
 
   classes Class[]
@@ -200,20 +204,21 @@ model Teacher {
 }
 
 model Student {
-  id            String         @id @default(cuid())
-  userId        String         @unique
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentId     String         @unique
-  enrollYear    Int
-  classes       Class[]
-  teams         Team[]
-  notifications Notification[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  comments      Comment[]
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId       String           @unique
+  enrollYear      Int
+  classes         Class[]
+  teams           Team[]
+  examSubmissions ExamSubmission[]
+  notifications   Notification[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  comments        Comment[]
   // Opcional: alunos self-signup (hub pessoal) não têm professor que os adicionou.
-  addedById     String?
-  addedBy       Teacher?       @relation("AddedStudents", fields: [addedById], references: [id])
+  addedById       String?
+  addedBy         Teacher?         @relation("AddedStudents", fields: [addedById], references: [id])
 
   @@index([studentId])
 }
@@ -391,6 +396,8 @@ model Exercise {
   topic          Topic?              @relation(fields: [topicId], references: [id])
   isTeamExercise Boolean             @default(false)
   examExercises  ExamExercise[]
+  options        ExerciseOption[]
+  answers        Answer[]
   creatorId      String
   creator        Teacher             @relation("ExerciseCreator", fields: [creatorId], references: [id])
   ownerId        String
@@ -435,23 +442,24 @@ enum DifficultyLevelEnum {
 }
 
 model Exam {
-  id          String         @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   description String?
   type        ExamTypeEnum
   moduleId    String
-  module      Module         @relation(fields: [moduleId], references: [id])
+  module      Module           @relation(fields: [moduleId], references: [id])
   date        DateTime
   duration    Int
   maxScore    Float
   exercises   ExamExercise[]
+  submissions ExamSubmission[]
   creatorId   String
-  creator     Teacher        @relation("ExamCreator", fields: [creatorId], references: [id])
+  creator     Teacher          @relation("ExamCreator", fields: [creatorId], references: [id])
   ownerId     String
-  owner       Teacher        @relation("ExamOwner", fields: [ownerId], references: [id])
+  owner       Teacher          @relation("ExamOwner", fields: [ownerId], references: [id])
   comments    Comment[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -483,6 +491,92 @@ model ExamExercise {
 
   @@id([examId, exerciseId])
   @@index([examId, order])
+}
+
+// ─────────────────────────────────────────────────────────────
+// S3 — Submissões + correção (lado do aluno).
+// Gabarito estruturado (ExerciseOption) p/ auto-correção de MC/TF;
+// texto/código/ficheiro ficam para correção manual do professor.
+// ─────────────────────────────────────────────────────────────
+enum SubmissionStatusEnum {
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+// Opção de uma pergunta estruturada (MULTIPLE_CHOICE / TRUE_FALSE).
+// O gabarito é a(s) opção(ões) com isCorrect=true. No S3 a regra é
+// resposta única (1 opção correta por exercício), mas o modelo permite multi.
+model ExerciseOption {
+  id         String   @id @default(cuid())
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int
+  answers    Answer[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId, order])
+  @@index([organizationId])
+}
+
+// Uma tentativa de UM aluno a UM exame (1 tentativa por aluno por exame).
+model ExamSubmission {
+  id          String               @id @default(cuid())
+  examId      String
+  exam        Exam                 @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId     String?
+  class       Class?               @relation(fields: [classId], references: [id])
+  status      SubmissionStatusEnum @default(IN_PROGRESS)
+  score       Float? // pontos totais obtidos; preenchido quando GRADED
+  startedAt   DateTime             @default(now())
+  submittedAt DateTime?
+  gradedAt    DateTime?
+  gradedById  String? // professor que finalizou a correção
+  gradedBy    Teacher?             @relation("SubmissionGrader", fields: [gradedById], references: [id])
+  answers     Answer[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  organizationId String // = exam.organizationId (escopo do professor)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+  @@index([examId])
+  @@index([studentId])
+  @@index([classId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+// Resposta a UM exercício dentro de uma submissão. Folha de junção
+// (sem organizationId, como ExamExercise) — escopo herdado da submissão.
+model Answer {
+  id               String          @id @default(cuid())
+  examSubmissionId String
+  examSubmission   ExamSubmission  @relation(fields: [examSubmissionId], references: [id], onDelete: Cascade)
+  exerciseId       String
+  exercise         Exercise        @relation(fields: [exerciseId], references: [id])
+  selectedOptionId String? // MC/TF: opção escolhida
+  selectedOption   ExerciseOption? @relation(fields: [selectedOptionId], references: [id])
+  responseText     String? // SHORT_ANSWER / LONG_ANSWER / CODE
+  isCorrect        Boolean? // resultado da auto-correção (null = manual por corrigir)
+  pointsAwarded    Float? // pontos atribuídos (auto ou manual)
+  feedback         String? // comentário do professor
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([examSubmissionId, exerciseId])
+  @@index([examSubmissionId])
+  @@index([exerciseId])
+  @@index([selectedOptionId])
 }
 
 model Material {
@@ -604,21 +698,22 @@ model Enrollment {
 }
 
 model Class {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  color       String?
-  courseId    String
-  course      Course       @relation(fields: [courseId], references: [id])
-  teacherId   String?
-  teacher     Teacher?     @relation(fields: [teacherId], references: [id])
-  students    Student[]
-  teams       Team[]
-  enrollments Enrollment[]
-  comments    Comment[]
-  schedules   LessonSchedule[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  color           String?
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id])
+  teacherId       String?
+  teacher         Teacher?         @relation(fields: [teacherId], references: [id])
+  students        Student[]
+  teams           Team[]
+  enrollments     Enrollment[]
+  comments        Comment[]
+  schedules       LessonSchedule[]
+  examSubmissions ExamSubmission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
