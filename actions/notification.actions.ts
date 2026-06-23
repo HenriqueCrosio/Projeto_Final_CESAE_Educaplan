@@ -19,6 +19,39 @@ async function teacherIdOrNull(): Promise<string | null> {
   return getCurrentTeacherId();
 }
 
+// Filtro de destinatário conforme o papel (professor OU aluno). null = sem sessão válida.
+async function recipientFilter(): Promise<{ teacherId: string } | { studentId: string } | null> {
+  try {
+    const ctx = await getSessionContext();
+    if (ctx.role === "teacher") return { teacherId: ctx.entityId };
+    if (ctx.role === "student") return { studentId: ctx.entityId };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Notificações não vistas do utilizador autenticado (professor ou aluno).
+export async function getMyUnseenNotifications() {
+  const where = await recipientFilter();
+  if (!where) return [];
+  return prisma.notification.findMany({
+    where: { ...where, seen: false },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+}
+
+// Marca como vistas as notificações não vistas do utilizador autenticado.
+export async function markMyNotificationsAsSeen() {
+  const where = await recipientFilter();
+  if (!where) return { count: 0 };
+  return prisma.notification.updateMany({
+    where: { ...where, seen: false },
+    data: { seen: true },
+  });
+}
+
 // Notificações não vistas do professor autenticado.
 export async function getUnseenNotifications() {
   const teacherId = await teacherIdOrNull();

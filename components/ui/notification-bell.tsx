@@ -8,11 +8,10 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getUnseenNotifications, markNotificationsAsSeen } from "@/actions/notification.actions";
+import { getMyUnseenNotifications, markMyNotificationsAsSeen } from "@/actions/notification.actions";
 
-type DbNotification = Awaited<ReturnType<typeof getUnseenNotifications>>[number];
+type DbNotification = Awaited<ReturnType<typeof getMyUnseenNotifications>>[number];
 
 export const NotificationBell = () => {
     const [notifications, setNotifications] = useState<DbNotification[]>([]);
@@ -20,11 +19,11 @@ export const NotificationBell = () => {
 
     const load = useCallback(async () => {
         try {
-            const items = await getUnseenNotifications();
+            const items = await getMyUnseenNotifications();
             setNotifications(items);
             setUnreadCount(items.length);
         } catch {
-            // Sessão sem professor (ex.: aluno/onboarding) → sino vazio.
+            // Sessão sem destinatário (ex.: onboarding) → sino vazio.
             setNotifications([]);
             setUnreadCount(0);
         }
@@ -39,7 +38,7 @@ export const NotificationBell = () => {
         if (open && unreadCount > 0) {
             setUnreadCount(0); // limpa o badge já (otimista)
             try {
-                await markNotificationsAsSeen();
+                await markMyNotificationsAsSeen();
             } catch {
                 // ignora — recarrega na próxima montagem
             }
@@ -50,36 +49,34 @@ export const NotificationBell = () => {
         <DropdownMenu onOpenChange={handleDropdownOpen}>
             <DropdownMenuTrigger asChild>
                 <Button
-                    size="lg"
+                    size="icon"
                     variant="ghost"
-                    className={cn(
-                        "relative flex items-center justify-center p-2 h-10 w-10 rounded-sm hover:bg-gray-200 transition",
-                        "focus:outline-none focus-visible:ring-0 active:ring-0"
-                    )}
+                    aria-label="Notificações"
+                    className="relative"
                 >
-                    <Bell className="h-8 w-8 text-gray-700" />
+                    <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-1 right-2 flex items-center justify-center w-3 h-3 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                             {unreadCount}
                         </span>
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 bg-white shadow-lg rounded-lg p-2">
+            <DropdownMenuContent align="end" className="w-80 p-1">
                 {notifications.length === 0 ? (
-                    <DropdownMenuItem className="text-gray-500 text-sm text-center w-full">
+                    <DropdownMenuItem className="w-full justify-center py-3 text-sm text-muted-foreground" disabled>
                         Sem notificações novas
                     </DropdownMenuItem>
                 ) : (
                     notifications.map((notification) => (
                         <DropdownMenuItem
                             key={notification.id}
-                            className="flex flex-col items-start p-3 border-b border-gray-200 last:border-none cursor-pointer hover:bg-gray-100"
+                            className="flex cursor-pointer flex-col items-start gap-0.5 border-b border-border p-3 last:border-none"
                         >
                             {notification.title && (
-                                <p className="text-sm font-semibold text-black">{notification.title}</p>
+                                <p className="text-sm font-semibold">{notification.title}</p>
                             )}
-                            <p className="text-sm text-gray-600">{notification.message}</p>
+                            <p className="text-sm text-muted-foreground">{notification.message}</p>
                         </DropdownMenuItem>
                     ))
                 )}

@@ -111,6 +111,7 @@ export async function gradeSubmission(submissionId: string, items: GradeItemInpu
       id: true,
       studentId: true,
       examId: true,
+      exam: { select: { name: true } },
       answers: { select: { id: true, exercise: { select: { points: true } } } },
     },
   });
@@ -157,6 +158,22 @@ export async function gradeSubmission(submissionId: string, items: GradeItemInpu
     }
   } catch {
     // Ganhos de gamificação nunca devem impedir a finalização da correção.
+  }
+
+  // Notifica o aluno que o exame foi avaliado (best-effort).
+  try {
+    await prisma.notification.create({
+      data: {
+        type: "OTHER",
+        title: "Exame avaliado",
+        message: `O teu exame "${submission.exam.name}" foi avaliado: ${score} pts.`,
+        studentId: submission.studentId,
+        organizationId,
+        seen: false,
+      },
+    });
+  } catch {
+    // Falha de notificação não deve impedir a correção.
   }
 
   return { score };
