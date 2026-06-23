@@ -1,0 +1,373 @@
+"use client";
+
+import * as React from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  BookOpen, Trophy, Lock, Check, Sparkles, Star, Flame, Brain, Target,
+  Rocket, Crown, Gem, Palette as PaletteIcon, Image as ImageIcon, Award, ShoppingBag,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { buyItem, type ShopItem } from "@/actions/shop.actions";
+
+// ── Ícones dos badges (o payload guarda o nome do ícone Lucide) ──
+const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Flame, Star, BookOpen, Brain, Target, Rocket, Crown, Gem, Award,
+};
+
+// ── Sistema de raridade: moldura + brilho + etiqueta (sistema semântico) ──
+const RARITY: Record<
+  string,
+  { label: string; ring: string; glow: string; chip: string; order: number }
+> = {
+  COMMON: { label: "Comum", ring: "ring-slate-300 dark:ring-slate-600", glow: "", chip: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300", order: 0 },
+  RARE: { label: "Raro", ring: "ring-sky-400 dark:ring-sky-500", glow: "shadow-[0_0_22px_-6px_rgba(56,189,248,0.7)]", chip: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300", order: 1 },
+  EPIC: { label: "Épico", ring: "ring-violet-400 dark:ring-violet-500", glow: "shadow-[0_0_26px_-5px_rgba(167,139,250,0.75)]", chip: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300", order: 2 },
+  LEGENDARY: { label: "Lendário", ring: "ring-amber-400 dark:ring-amber-400", glow: "shadow-[0_0_30px_-4px_rgba(251,191,36,0.85)]", chip: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", order: 3 },
+};
+
+type PayloadAny = Record<string, string> | null | undefined;
+const pl = (p: unknown) => (p ?? {}) as Record<string, string>;
+
+type Tab = "BADGE" | "PALETTE" | "BANNER" | "COLLECTION";
+const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "BADGE", label: "Badges", icon: Award },
+  { id: "PALETTE", label: "Paletas", icon: PaletteIcon },
+  { id: "BANNER", label: "Banners", icon: ImageIcon },
+  { id: "COLLECTION", label: "A minha coleção", icon: ShoppingBag },
+];
+
+// ── Visual de um item conforme o tipo ──
+function ItemVisual({ item, size = "md" }: { item: { type: string; rarity: string; payload: unknown }; size?: "md" | "lg" }) {
+  const r = RARITY[item.rarity] ?? RARITY.COMMON;
+  const p = pl(item.payload);
+  const dim = size === "lg" ? "h-20 w-20" : "h-16 w-16";
+
+  if (item.type === "BADGE") {
+    const Icon = BADGE_ICONS[p.icon] ?? Star;
+    const color = p.color ?? "#6366f1";
+    return (
+      <div
+        className={cn("flex items-center justify-center rounded-full ring-2", dim, r.ring, r.glow)}
+        style={{ backgroundColor: `${color}1f`, color }}
+      >
+        <Icon className={size === "lg" ? "h-9 w-9" : "h-7 w-7"} />
+      </div>
+    );
+  }
+  if (item.type === "PALETTE") {
+    return (
+      <div className={cn("flex items-center justify-center gap-1 rounded-2xl ring-2 p-2", dim, r.ring, r.glow)} style={{ backgroundColor: p.bg }}>
+        <span className="h-7 w-3 rounded-full" style={{ backgroundColor: p.accent }} />
+        <span className="h-7 w-3 rounded-full" style={{ backgroundColor: p.border }} />
+        <span className="h-7 w-3 rounded-full border" style={{ backgroundColor: p.bg, borderColor: p.border }} />
+      </div>
+    );
+  }
+  // BANNER
+  return (
+    <div
+      className={cn("rounded-2xl ring-2", size === "lg" ? "h-20 w-32" : "h-16 w-24", r.ring, r.glow)}
+      style={{ backgroundImage: p.gradient }}
+    />
+  );
+}
+
+// ── Cartão de pré-visualização do Hub (reflete paleta/banner em foco) ──
+function HubPreview({ palette, banner }: { palette?: PayloadAny; banner?: PayloadAny }) {
+  const pal = palette ?? undefined;
+  return (
+    <div className="overflow-hidden rounded-2xl border shadow-sm" style={pal ? { backgroundColor: pal.bg, borderColor: pal.border } : undefined}>
+      <div className="h-20" style={{ backgroundImage: banner?.gradient ?? "linear-gradient(135deg,hsl(var(--primary)/0.3),hsl(var(--primary)/0.1),transparent)" }} />
+      <div className="flex items-end gap-3 p-4">
+        <div className="-mt-9 flex h-12 w-12 items-center justify-center rounded-xl border-4 border-card bg-primary text-lg font-bold text-primary-foreground" style={pal ? { backgroundColor: pal.accent } : undefined}>
+          A
+        </div>
+        <div className="pb-0.5">
+          <div className="text-sm font-semibold" style={pal ? { color: pal.accent } : undefined}>O teu Hub</div>
+          <div className="text-xs text-muted-foreground">pré-visualização ao vivo</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function RewardShop({
+  items: initialItems, books: initialBooks, level, xp, levelInto, levelNeeded, collection,
+}: {
+  items: ShopItem[];
+  books: number;
+  level: number;
+  xp: number;
+  levelInto: number;
+  levelNeeded: number;
+  collection: { id: string; code: string; type: string; name: string; rarity: string; payload: unknown; acquiredAt: Date }[];
+}) {
+  const reduce = useReducedMotion();
+  const [items, setItems] = React.useState(initialItems);
+  const [books, setBooks] = React.useState(initialBooks);
+  const [tab, setTab] = React.useState<Tab>("BADGE");
+  const [buying, setBuying] = React.useState<string | null>(null);
+  const [bought, setBought] = React.useState<string | null>(null);
+  const [hovered, setHovered] = React.useState<ShopItem | null>(null);
+  const [toast, setToast] = React.useState<{ msg: string; ok: boolean } | null>(null);
+
+  const levelPct = levelNeeded ? Math.min(100, Math.round((levelInto / levelNeeded) * 100)) : 0;
+  const featured = items.filter((i) => i.featured && !i.owned);
+  const tabItems = items.filter((i) => i.type === tab);
+
+  React.useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  async function handleBuy(item: ShopItem) {
+    if (buying || item.owned || item.locked || !item.affordable) return;
+    setBuying(item.id);
+    const res = await buyItem(item.id);
+    setBuying(null);
+    if (res.ok) {
+      setBooks(res.books);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, owned: true } : { ...i, affordable: res.books >= i.cost })));
+      setBought(item.id);
+      setTimeout(() => setBought(null), 1400);
+      setToast({ msg: `Desbloqueaste "${res.itemName}"!`, ok: true });
+    } else {
+      setToast({ msg: res.error, ok: false });
+    }
+  }
+
+  const fade = reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
+
+  return (
+    <div className="mx-auto max-w-5xl p-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Recompensas</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gasta <strong>books</strong> a desbloquear emblemas, cores e banners. O XP marca o teu nível — e nunca se perde.
+          </p>
+        </div>
+        {/* Saldo de books sempre à vista */}
+        <div className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 shadow-sm">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <motion.span key={books} initial={reduce ? false : { scale: 1.3 }} animate={{ scale: 1 }} className="text-lg font-bold tabular-nums">
+            {books}
+          </motion.span>
+          <span className="text-sm text-muted-foreground">books</span>
+        </div>
+      </div>
+
+      {/* Barra de progressão do nível */}
+      <div className="mt-5 rounded-xl border bg-card p-4 shadow-sm">
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2 font-medium"><Trophy className="h-4 w-4 text-primary" /> Nível {level}</span>
+          <span className="text-muted-foreground">{xp} XP · faltam {levelNeeded - levelInto} para o nível {level + 1}</span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-primary/10">
+          <motion.div className="h-full rounded-full bg-primary" initial={{ width: 0 }} animate={{ width: `${levelPct}%` }} transition={{ duration: reduce ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }} />
+        </div>
+      </div>
+
+      {/* Em destaque */}
+      {featured.length > 0 && (
+        <div className="mt-7">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <h2 className="text-lg font-semibold">Em destaque</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {featured.map((item) => (
+              <FeaturedCard key={item.id} item={item} onBuy={handleBuy} buying={buying === item.id} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="mt-8 flex flex-wrap gap-1 rounded-xl border bg-muted/40 p-1">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {active && (
+                <motion.span layoutId="shop-tab" className="absolute inset-0 -z-10 rounded-lg bg-primary" transition={{ type: "spring", stiffness: 400, damping: 32 }} />
+              )}
+              <t.icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Conteúdo da tab */}
+      {tab === "COLLECTION" ? (
+        <Collection collection={collection} />
+      ) : (
+        <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_18rem]">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {tabItems.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  layout
+                  {...fade}
+                  transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : i * 0.03, ease: [0.22, 1, 0.36, 1] }}
+                  onMouseEnter={() => setHovered(item)}
+                >
+                  <RewardCard item={item} buying={buying === item.id} bought={bought === item.id} onBuy={handleBuy} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Pré-visualização ao vivo (paletas/banners) */}
+          {(tab === "PALETTE" || tab === "BANNER") && (
+            <aside className="hidden lg:block">
+              <div className="sticky top-6">
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Pré-visualização</div>
+                <HubPreview
+                  palette={tab === "PALETTE" && hovered?.type === "PALETTE" ? (pl(hovered.payload) as PayloadAny) : undefined}
+                  banner={tab === "BANNER" && hovered?.type === "BANNER" ? (pl(hovered.payload) as PayloadAny) : undefined}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">Passa o rato num item para ver aplicado.</p>
+              </div>
+            </aside>
+          )}
+        </div>
+      )}
+
+      {/* Toast inline */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            className={cn(
+              "fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full px-5 py-2.5 text-sm font-medium shadow-lg",
+              toast.ok ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground",
+            )}
+          >
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Cartão de item da loja ──
+function RewardCard({ item, buying, bought, onBuy }: { item: ShopItem; buying: boolean; bought: boolean; onBuy: (i: ShopItem) => void }) {
+  const reduce = useReducedMotion();
+  const r = RARITY[item.rarity] ?? RARITY.COMMON;
+
+  return (
+    <div className={cn("group relative flex h-full flex-col items-center rounded-2xl border bg-card p-5 text-center shadow-sm transition-shadow", !item.locked && "hover:shadow-md")}>
+      <span className={cn("absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold", r.chip)}>{r.label}</span>
+
+      <motion.div whileHover={item.locked || reduce ? undefined : { y: -4 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} className={cn("mt-2", item.locked && "opacity-40 grayscale")}>
+        <ItemVisual item={item} />
+      </motion.div>
+
+      <div className="mt-4 font-semibold">{item.name}</div>
+      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.description}</div>
+
+      <div className="mt-4 w-full">
+        {item.owned ? (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/10 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <Check className="h-4 w-4" /> No teu inventário
+          </div>
+        ) : item.locked ? (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-muted py-2 text-sm font-medium text-muted-foreground">
+            <Lock className="h-4 w-4" /> Nível {item.requiredLevel}
+          </div>
+        ) : (
+          <button
+            onClick={() => onBuy(item)}
+            disabled={!item.affordable || buying}
+            className={cn(
+              "flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors",
+              item.affordable ? "bg-primary text-primary-foreground hover:bg-primary/90" : "cursor-not-allowed bg-muted text-muted-foreground",
+            )}
+          >
+            <BookOpen className="h-4 w-4" />
+            {buying ? "A comprar…" : item.cost}
+          </button>
+        )}
+      </div>
+
+      {/* Brilho ao comprar */}
+      <AnimatePresence>
+        {bought && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.4 }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-emerald-500/15"
+          >
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg">
+              <Check className="h-7 w-7" />
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Cartão de destaque (maior) ──
+function FeaturedCard({ item, onBuy, buying }: { item: ShopItem; onBuy: (i: ShopItem) => void; buying: boolean }) {
+  const r = RARITY[item.rarity] ?? RARITY.COMMON;
+  return (
+    <div className="relative flex items-center gap-5 overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 shadow-sm">
+      <ItemVisual item={item} size="lg" />
+      <div className="min-w-0 flex-1">
+        <span className={cn("inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold", r.chip)}>{r.label}</span>
+        <div className="mt-1.5 truncate text-lg font-bold">{item.name}</div>
+        <div className="line-clamp-2 text-xs text-muted-foreground">{item.description}</div>
+        <div className="mt-3">
+          {item.owned ? (
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400"><Check className="h-4 w-4" /> No inventário</span>
+          ) : item.locked ? (
+            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"><Lock className="h-4 w-4" /> Nível {item.requiredLevel}</span>
+          ) : (
+            <button onClick={() => onBuy(item)} disabled={!item.affordable || buying} className={cn("inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors", item.affordable ? "bg-primary text-primary-foreground hover:bg-primary/90" : "cursor-not-allowed bg-muted text-muted-foreground")}>
+              <BookOpen className="h-4 w-4" /> {buying ? "A comprar…" : `${item.cost} books`}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Coleção ──
+function Collection({ collection }: { collection: { id: string; type: string; name: string; rarity: string; payload: unknown }[] }) {
+  if (collection.length === 0) {
+    return (
+      <div className="mt-6 rounded-2xl border bg-card p-10 text-center shadow-sm">
+        <ShoppingBag className="mx-auto h-8 w-8 text-muted-foreground/60" />
+        <p className="mt-3 text-sm text-muted-foreground">Ainda não desbloqueaste nada. Ganha books a estudar e começa a colecionar!</p>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-5 grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {collection.map((item) => (
+        <div key={item.id} className="flex flex-col items-center rounded-2xl border bg-card p-5 text-center shadow-sm">
+          <ItemVisual item={item} />
+          <div className="mt-3 text-sm font-semibold">{item.name}</div>
+          <div className="text-xs text-muted-foreground">{RARITY[item.rarity]?.label ?? item.rarity}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
