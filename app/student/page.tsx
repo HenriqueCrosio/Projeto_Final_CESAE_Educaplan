@@ -16,11 +16,14 @@ export default async function StudentHome() {
   const classes = await getMyClasses();
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 p-8">
+    <div className="min-h-[calc(100dvh-3.5rem)] w-full bg-muted/30 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Olá, {name} 👋</h1>
-          <a href="/api/auth/logout" className="text-sm text-gray-600 hover:underline">
+          <h1 className="text-3xl font-bold tracking-tight">Olá, {name} 👋</h1>
+          <a
+            href="/api/auth/logout"
+            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+          >
             Sair
           </a>
         </div>
@@ -28,8 +31,8 @@ export default async function StudentHome() {
         <h2 className="text-xl font-semibold mb-4">As minhas turmas</h2>
 
         {classes.length === 0 ? (
-          <div className="rounded-xl border bg-white p-6 shadow-sm">
-            <p className="text-gray-600">
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <p className="text-muted-foreground">
               Ainda não estás em nenhuma turma. Quando um professor te adicionar com este email,
               as tuas turmas, aulas e materiais aparecem aqui.
             </p>
@@ -42,7 +45,7 @@ export default async function StudentHome() {
                 <a
                   key={c.id}
                   href={`/student/turmas/${c.id}`}
-                  className="block rounded-xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                  className="group block rounded-xl border bg-card p-5 shadow-sm transition hover:shadow-md hover:border-primary/40"
                 >
                   <div className="flex items-start gap-3">
                     <span
@@ -50,12 +53,12 @@ export default async function StudentHome() {
                       style={{ backgroundColor: c.color || "#94a3b8" }}
                     />
                     <div className="min-w-0">
-                      <h3 className="truncate font-semibold">{c.name}</h3>
-                      <p className="truncate text-sm text-gray-600">{c.course.name}</p>
+                      <h3 className="truncate font-semibold group-hover:text-primary">{c.name}</h3>
+                      <p className="truncate text-sm text-muted-foreground">{c.course.name}</p>
                       {tName && (
-                        <p className="mt-2 truncate text-xs text-gray-400">Professor: {tName}</p>
+                        <p className="mt-2 truncate text-xs text-muted-foreground/70">Professor: {tName}</p>
                       )}
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground/70">
                         {c._count.students} aluno(s) · {c._count.schedules} aula(s) marcada(s)
                       </p>
                     </div>

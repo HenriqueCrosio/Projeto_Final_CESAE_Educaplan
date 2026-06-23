@@ -19,7 +19,7 @@ export const SupportBarHeader: React.FC<SupportBarHeaderProps> = ({ group, isOpe
         <h3
           className={cn(
             "font-medium mb-2 flex-grow",
-            group.type === "header" ? "text-md text-gray-700" : "text-sm text-gray-500",
+            group.type === "header" ? "text-md text-foreground" : "text-sm text-muted-foreground",
           )}
         >
           {group.name}
@@ -27,14 +27,14 @@ export const SupportBarHeader: React.FC<SupportBarHeaderProps> = ({ group, isOpe
         {group.type === "body" && (
           <span className="ml-2">
             {isOpen ? (
-              <ChevronDown className="h-3 w-3 fill-current text-gray-400" />
+              <ChevronDown className="h-3 w-3 fill-current text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-3 w-3 fill-current text-gray-400" />
+              <ChevronRight className="h-3 w-3 fill-current text-muted-foreground" />
             )}
           </span>
         )}
       </div>
-      {group.description && <p className="text-xs text-gray-400 mb-2">{group.description}</p>}
+      {group.description && <p className="text-xs text-muted-foreground/70 mb-2">{group.description}</p>}
     </>
   )
 }

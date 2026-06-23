@@ -6,6 +6,7 @@ import { PageLayout } from "@/components/page-layout";
 import { siteMetadata } from "@/components/page-head";
 import { PreloadResources } from "@/app/preload-resources";
 import { UserProvider } from "@auth0/nextjs-auth0/client";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,14 +31,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt" suppressHydrationWarning>
       <PreloadResources />
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <UserProvider>
-          <PageLayout>{children}</PageLayout>
-        </UserProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <UserProvider>
+            <PageLayout>{children}</PageLayout>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

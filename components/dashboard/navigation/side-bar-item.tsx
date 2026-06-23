@@ -29,8 +29,8 @@ export const SideBarItem = memo(({ item }: { item: NavItem }) => {
     <Link href={item.href} onClick={handleClick}>
       <button
         className={cn(
-          "flex flex-col items-center justify-center p-4 text-xs text-gray-600 hover:bg-gray-200 transition-colors w-full",
-          isActive && "bg-gray-200 text-blue-400 ",
+          "flex flex-col items-center justify-center p-4 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full",
+          isActive && "bg-accent text-primary font-medium",
         )}
       >
         <SideBarButtonIcon name={item.icon} />

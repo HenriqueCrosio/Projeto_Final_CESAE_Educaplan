@@ -32,7 +32,7 @@ export const SupportBarItems: React.FC<SupportBarItemsProps> = ({ groups }) => {
           />
         ))
       ) : (
-        <p className="text-gray-500 p-4">Nenhum item disponível</p>
+        <p className="text-muted-foreground p-4">Nenhum item disponível</p>
       )}
     </>
   )

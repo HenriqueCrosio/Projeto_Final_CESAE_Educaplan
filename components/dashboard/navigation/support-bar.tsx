@@ -13,7 +13,7 @@ export const SupportBar: React.FC = () => {
 
   return (
     <div className="relative flex h-[calc(100vh-3.5rem)]">
-      <nav className={cn("relative border-r bg-gray-50 transition-all overflow-hidden", isSecondaryNavCollapsed ? "w-0" : "w-64")}>
+      <nav className={cn("relative border-r border-border bg-muted/30 transition-all overflow-hidden", isSecondaryNavCollapsed ? "w-0" : "w-64")}>
         <div className="p-4 pb-16 w-full h-full flex flex-col overflow-y-auto">
           <div className="flex-grow overflow-y-auto">
             {Object.entries(supportBarGroups).map(([key, groups]) => (

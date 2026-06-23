@@ -21,7 +21,7 @@ export const SideBarItems: React.FC = () => {
           <SideBarItem key={item.id} item={item} />
         ))}
       </div>
-      <div className="w-full h-px bg-gray-200 my-2" aria-hidden="true" />
+      <div className="w-full h-px bg-border my-2" aria-hidden="true" />
       <div className="w-full flex flex-col">
         {bottomNav.map((item: NavItem) => (
           <SideBarItem key={item.id} item={item}/>

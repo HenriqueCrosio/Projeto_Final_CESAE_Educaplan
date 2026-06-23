@@ -13,13 +13,13 @@ export const SideBar: React.FC = () => {
   }, []);
 
   if (!topNav.length) {
-    return <div className="bg-gray-100 h-[calc(100vh-3.5rem)] animate-pulse" />;
+    return <div className="bg-muted/50 h-[calc(100vh-3.5rem)] animate-pulse" />;
   }
 
   return (
-    <nav className="bg-gray-100 h-[calc(100vh-3.5rem)] flex flex-col justify-between">
+    <nav className="bg-muted/50 border-r border-border h-[calc(100vh-3.5rem)] flex flex-col justify-between">
       <SideBarItems />
-      <div className="w-full h-px bg-gray-200 my-2" aria-hidden="true" />
+      <div className="w-full h-px bg-border my-2" aria-hidden="true" />
       <SideBarButtonLogout />
     </nav>
   );

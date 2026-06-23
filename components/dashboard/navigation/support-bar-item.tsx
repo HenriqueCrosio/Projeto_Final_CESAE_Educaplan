@@ -34,8 +34,8 @@ export const SupportBarItem: React.FC<SupportBarItemProps> = ({ item, depth = 0,
     <div className="w-full">
       <Link
         href={item.href}
-        className={`flex items-center w-full text-left py-2 px-4 text-sm text-gray-600 hover:bg-gray-200 transition-colors ${
-          activeCollapsibleSidebarItem?.id === item.id ? "bg-gray-100 font-semibold text-blue-400" : ""
+        className={`flex items-center w-full text-left py-2 px-4 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors ${
+          activeCollapsibleSidebarItem?.id === item.id ? "bg-accent font-semibold text-primary" : ""
         }`}
         onClick={handleClick}
       >

@@ -4,7 +4,7 @@ import { NavBarBrand } from "./nav-bar-brand";
 
 export const NavBar: React.FC = () => {
   return (
-    <div className="flex w-full bg-gray-200 z-50">
+    <div className="flex w-full bg-card border-b border-border z-50">
       <nav className="flex flex-row w-full justify-between px-6 h-[3.5rem]">
         <NavBarBrand />
         <NavBarButtons />

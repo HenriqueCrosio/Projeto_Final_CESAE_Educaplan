@@ -15,7 +15,7 @@ export const SupportBarButtonToggle: React.FC<React.ButtonHTMLAttributes<HTMLBut
     <button
       onClick={toggleSecondaryNav}
       className={cn(
-        "p-2 rounded-full bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200",
+        "p-2 rounded-full bg-card border border-border shadow-sm hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring",
         "transition-all",
         isSecondaryNavCollapsed ? "-mr-4" : "",
         className,

@@ -12,7 +12,7 @@ interface MostPopularCourseProps {
 export const MostPopularCourse: React.FC<MostPopularCourseProps> = ({ course }) => (
   <Card className="col-span-full">
     <CardHeader>
-      <CardTitle>Most Popular Course</CardTitle>
+      <CardTitle>Curso mais popular</CardTitle>
     </CardHeader>
     <CardContent>
       <p>{course.name}</p>

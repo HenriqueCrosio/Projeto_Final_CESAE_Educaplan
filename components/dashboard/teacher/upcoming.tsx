@@ -14,7 +14,7 @@ interface UpcomingLessonsProps {
 export const UpcomingLessons: React.FC<UpcomingLessonsProps> = ({ lessons }) => (
   <Card className="col-span-full">
     <CardHeader>
-      <CardTitle>Upcoming Lessons</CardTitle>
+      <CardTitle>Próximas aulas</CardTitle>
     </CardHeader>
     <CardContent>
       <ul>

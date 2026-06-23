@@ -9,7 +9,7 @@ export const SideBarButtonLogout: React.FC = () => {
 
   return (
     <a
-      className="flex flex-col items-center justify-center p-3 text-xs text-gray-600 hover:bg-gray-200 transition-colors w-full"
+      className="flex flex-col items-center justify-center p-3 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full"
       href="/api/auth/logout"
     >
       <SideBarButtonIcon name="logout" />
