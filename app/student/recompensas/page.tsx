@@ -1,14 +1,15 @@
-import { getShopCatalog, getMyCollection } from "@/actions/shop.actions";
+import { getShopCatalog, getMyCollection, getChestsAndBoosts } from "@/actions/shop.actions";
 import { getMyGameProfile } from "@/actions/gamification.actions";
 import { RewardShop } from "@/components/student/shop/reward-shop";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecompensasPage() {
-  const [catalog, collection, game] = await Promise.all([
+  const [catalog, collection, game, extras] = await Promise.all([
     getShopCatalog(),
     getMyCollection(),
     getMyGameProfile(),
+    getChestsAndBoosts(),
   ]);
 
   return (
@@ -19,6 +20,9 @@ export default async function RecompensasPage() {
       xp={game.xp}
       levelInto={game.levelInto}
       levelNeeded={game.levelNeeded}
+      chests={extras.chests}
+      boosts={extras.boosts}
+      activeBoost={extras.activeBoost}
       collection={collection.map((c) => ({
         id: c.item.id,
         code: c.item.code,

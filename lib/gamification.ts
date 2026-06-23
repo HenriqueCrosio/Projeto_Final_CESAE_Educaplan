@@ -101,7 +101,7 @@ export async function awardActivity(
   opts?: { refId?: string; bonusXp?: number; bonusBooks?: number },
 ): Promise<{ xp: number; books: number; level: number; currentStreak: number }> {
   const base = ACTIVITY_REWARDS[type];
-  const xp = base.xp + (opts?.bonusXp ?? 0);
+  const baseXp = base.xp + (opts?.bonusXp ?? 0);
   const books = base.books + (opts?.bonusBooks ?? 0);
 
   return prisma.$transaction(async (tx) => {
@@ -110,6 +110,14 @@ export async function awardActivity(
       create: { studentId },
       update: {},
     });
+
+    // Boost ativo (ex.: XP a dobrar) multiplica só o XP ganho.
+    const boost = await tx.studentBoost.findFirst({
+      where: { studentId, type: "DOUBLE_XP", expiresAt: { gt: new Date() } },
+      orderBy: { multiplier: "desc" },
+      select: { multiplier: true },
+    });
+    const xp = boost ? Math.round(baseXp * boost.multiplier) : baseXp;
 
     const today = utcDay(new Date());
     const last = profile.lastActivityOn ? utcDay(profile.lastActivityOn) : null;

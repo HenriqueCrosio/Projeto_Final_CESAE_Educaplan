@@ -5,13 +5,16 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   BookOpen, Trophy, Lock, Check, Sparkles, Star, Flame, Brain, Target,
   Rocket, Crown, Gem, Palette as PaletteIcon, Image as ImageIcon, Award, ShoppingBag,
+  Package, Zap, Gift, X, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buyItem, type ShopItem } from "@/actions/shop.actions";
+import {
+  buyItem, buyBoost, openChest, type ShopItem, type ChestReward,
+} from "@/actions/shop.actions";
 
 // ── Ícones dos badges (o payload guarda o nome do ícone Lucide) ──
 const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  Flame, Star, BookOpen, Brain, Target, Rocket, Crown, Gem, Award,
+  Flame, Star, BookOpen, Brain, Target, Rocket, Crown, Gem, Award, Zap, Package,
 };
 
 // ── Sistema de raridade: moldura + brilho + etiqueta (sistema semântico) ──
@@ -28,13 +31,23 @@ const RARITY: Record<
 type PayloadAny = Record<string, string> | null | undefined;
 const pl = (p: unknown) => (p ?? {}) as Record<string, string>;
 
-type Tab = "BADGE" | "PALETTE" | "BANNER" | "COLLECTION";
+type Tab = "BADGE" | "PALETTE" | "BANNER" | "CHEST" | "BOOST" | "COLLECTION";
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "BADGE", label: "Badges", icon: Award },
   { id: "PALETTE", label: "Paletas", icon: PaletteIcon },
   { id: "BANNER", label: "Banners", icon: ImageIcon },
-  { id: "COLLECTION", label: "A minha coleção", icon: ShoppingBag },
+  { id: "CHEST", label: "Baús", icon: Package },
+  { id: "BOOST", label: "Boosts", icon: Zap },
+  { id: "COLLECTION", label: "Coleção", icon: ShoppingBag },
 ];
+
+function timeLeft(expiresAt: Date): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "terminado";
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
 // ── Visual de um item conforme o tipo ──
 function ItemVisual({ item, size = "md" }: { item: { type: string; rarity: string; payload: unknown }; size?: "md" | "lg" }) {
@@ -93,6 +106,7 @@ function HubPreview({ palette, banner }: { palette?: PayloadAny; banner?: Payloa
 
 export function RewardShop({
   items: initialItems, books: initialBooks, level, xp, levelInto, levelNeeded, collection,
+  chests: initialChests, boosts: initialBoosts, activeBoost: initialBoost,
 }: {
   items: ShopItem[];
   books: number;
@@ -100,16 +114,68 @@ export function RewardShop({
   xp: number;
   levelInto: number;
   levelNeeded: number;
+  chests: ShopItem[];
+  boosts: ShopItem[];
+  activeBoost: { multiplier: number; expiresAt: Date } | null;
   collection: { id: string; code: string; type: string; name: string; rarity: string; payload: unknown; acquiredAt: Date }[];
 }) {
   const reduce = useReducedMotion();
   const [items, setItems] = React.useState(initialItems);
+  const [chests] = React.useState(initialChests);
+  const [boosts, setBoosts] = React.useState(initialBoosts);
+  const [activeBoost, setActiveBoost] = React.useState(initialBoost);
   const [books, setBooks] = React.useState(initialBooks);
   const [tab, setTab] = React.useState<Tab>("BADGE");
   const [buying, setBuying] = React.useState<string | null>(null);
   const [bought, setBought] = React.useState<string | null>(null);
   const [hovered, setHovered] = React.useState<ShopItem | null>(null);
   const [toast, setToast] = React.useState<{ msg: string; ok: boolean } | null>(null);
+  const [chestOpen, setChestOpen] = React.useState<{ chest: ShopItem; reward: ChestReward | null } | null>(null);
+
+  const setAffordability = (b: number) =>
+    setItems((prev) => prev.map((i) => ({ ...i, affordable: b >= i.cost })));
+
+  async function handleBuyBoost(item: ShopItem) {
+    if (buying || item.locked || !item.affordable) return;
+    setBuying(item.id);
+    const res = await buyBoost(item.id);
+    setBuying(null);
+    if (res.ok) {
+      setBooks(res.books);
+      setAffordability(res.books);
+      setBoosts((prev) => prev.map((b) => ({ ...b, affordable: res.books >= b.cost })));
+      const p = (item.payload ?? {}) as Record<string, number>;
+      const hours = Number(p.durationH) || 24;
+      setActiveBoost((cur) => {
+        const base = cur ? new Date(cur.expiresAt).getTime() : Date.now();
+        return { multiplier: Number(p.multiplier) || 2, expiresAt: new Date(base + hours * 3_600_000) };
+      });
+      setToast({ msg: `Boost ativado: ${res.itemName}!`, ok: true });
+    } else {
+      setToast({ msg: res.error, ok: false });
+    }
+  }
+
+  async function handleOpenChest(chest: ShopItem) {
+    if (chestOpen || chest.locked || !chest.affordable) return;
+    setChestOpen({ chest, reward: null });
+    const wait = new Promise((r) => setTimeout(r, reduce ? 0 : 1400));
+    const [res] = await Promise.all([openChest(chest.id), wait]);
+    if (res.ok) {
+      setBooks(res.books);
+      setAffordability(res.books);
+      setBoosts((prev) => prev.map((b) => ({ ...b, affordable: res.books >= b.cost })));
+      if (res.reward.kind === "item") {
+        // novo cosmético desbloqueado: reflete em "owned" no catálogo
+        const wonName = res.reward.itemName;
+        setItems((prev) => prev.map((i) => (i.name === wonName ? { ...i, owned: true } : i)));
+      }
+      setChestOpen({ chest, reward: res.reward });
+    } else {
+      setChestOpen(null);
+      setToast({ msg: res.error, ok: false });
+    }
+  }
 
   const levelPct = levelNeeded ? Math.min(100, Math.round((levelInto / levelNeeded) * 100)) : 0;
   const featured = items.filter((i) => i.featured && !i.owned);
@@ -169,6 +235,20 @@ export function RewardShop({
         </div>
       </div>
 
+      {/* Boost ativo */}
+      {activeBoost && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/20 text-amber-500">
+            <Zap className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <span className="font-semibold text-amber-600 dark:text-amber-400">XP a dobrar ativo</span>
+            <span className="text-muted-foreground"> · ×{activeBoost.multiplier} em todas as atividades</span>
+          </div>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" /> {timeLeft(activeBoost.expiresAt)}</span>
+        </div>
+      )}
+
       {/* Em destaque */}
       {featured.length > 0 && (
         <div className="mt-7">
@@ -210,6 +290,18 @@ export function RewardShop({
       {/* Conteúdo da tab */}
       {tab === "COLLECTION" ? (
         <Collection collection={collection} />
+      ) : tab === "CHEST" ? (
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {chests.map((c) => (
+            <ChestCard key={c.id} chest={c} busy={!!chestOpen} onOpen={handleOpenChest} />
+          ))}
+        </div>
+      ) : tab === "BOOST" ? (
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {boosts.map((b) => (
+            <BoostCard key={b.id} boost={b} buying={buying === b.id} onBuy={handleBuyBoost} />
+          ))}
+        </div>
       ) : (
         <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_18rem]">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -260,8 +352,179 @@ export function RewardShop({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Abertura de baú */}
+      <AnimatePresence>
+        {chestOpen && (
+          <ChestOpener
+            chest={chestOpen.chest}
+            reward={chestOpen.reward}
+            onClose={() => setChestOpen(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+// ── Cartão de baú ──
+function ChestCard({ chest, busy, onOpen }: { chest: ShopItem; busy: boolean; onOpen: (c: ShopItem) => void }) {
+  const reduce = useReducedMotion();
+  const r = RARITY[chest.rarity] ?? RARITY.COMMON;
+  const color = (pl(chest.payload).color as string) ?? "#b45309";
+  return (
+    <div className="flex flex-col items-center rounded-2xl border bg-card p-6 text-center shadow-sm">
+      <motion.div
+        animate={chest.locked || reduce ? undefined : { y: [0, -4, 0] }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+        className={cn("flex h-20 w-20 items-center justify-center rounded-2xl ring-2", r.ring, r.glow, chest.locked && "opacity-40 grayscale")}
+        style={{ backgroundColor: `${color}1f`, color }}
+      >
+        <Package className="h-10 w-10" />
+      </motion.div>
+      <div className="mt-4 font-semibold">{chest.name}</div>
+      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{chest.description}</div>
+      <div className="mt-4 w-full">
+        {chest.locked ? (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-muted py-2 text-sm font-medium text-muted-foreground">
+            <Lock className="h-4 w-4" /> Nível {chest.requiredLevel}
+          </div>
+        ) : (
+          <button
+            onClick={() => onOpen(chest)}
+            disabled={!chest.affordable || busy}
+            className={cn("flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors",
+              chest.affordable ? "bg-primary text-primary-foreground hover:bg-primary/90" : "cursor-not-allowed bg-muted text-muted-foreground")}
+          >
+            <Gift className="h-4 w-4" /> Abrir · {chest.cost}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Cartão de boost ──
+function BoostCard({ boost, buying, onBuy }: { boost: ShopItem; buying: boolean; onBuy: (b: ShopItem) => void }) {
+  const r = RARITY[boost.rarity] ?? RARITY.COMMON;
+  return (
+    <div className="flex flex-col items-center rounded-2xl border bg-card p-6 text-center shadow-sm">
+      <div className={cn("flex h-16 w-16 items-center justify-center rounded-full ring-2", r.ring, r.glow, boost.locked && "opacity-40 grayscale")} style={{ backgroundColor: "#f59e0b1f", color: "#f59e0b" }}>
+        <Zap className="h-7 w-7" />
+      </div>
+      <div className="mt-4 font-semibold">{boost.name}</div>
+      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{boost.description}</div>
+      <div className="mt-4 w-full">
+        {boost.locked ? (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg bg-muted py-2 text-sm font-medium text-muted-foreground">
+            <Lock className="h-4 w-4" /> Nível {boost.requiredLevel}
+          </div>
+        ) : (
+          <button
+            onClick={() => onBuy(boost)}
+            disabled={!boost.affordable || buying}
+            className={cn("flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors",
+              boost.affordable ? "bg-primary text-primary-foreground hover:bg-primary/90" : "cursor-not-allowed bg-muted text-muted-foreground")}
+          >
+            <Zap className="h-4 w-4" /> {buying ? "A ativar…" : `Ativar · ${boost.cost}`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Overlay de abertura de baú (suspense → revelação) ──
+function ChestOpener({ chest, reward, onClose }: { chest: ShopItem; reward: ChestReward | null; onClose: () => void }) {
+  const reduce = useReducedMotion();
+  const color = (pl(chest.payload).color as string) ?? "#b45309";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm"
+      onClick={reward ? onClose : undefined}
+    >
+      <motion.div
+        initial={reduce ? false : { scale: 0.9, y: 12 }} animate={{ scale: 1, y: 0 }}
+        className="relative w-full max-w-sm rounded-3xl border bg-card p-8 text-center shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {reward && (
+          <button onClick={onClose} aria-label="Fechar" className="absolute right-4 top-4 text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        )}
+
+        {!reward ? (
+          // Suspense: o baú a tremer
+          <div className="flex flex-col items-center py-6">
+            <motion.div
+              animate={reduce ? undefined : { rotate: [-6, 6, -6], scale: [1, 1.06, 1] }}
+              transition={{ repeat: Infinity, duration: 0.5 }}
+              className="flex h-28 w-28 items-center justify-center rounded-3xl shadow-lg"
+              style={{ backgroundColor: `${color}2a`, color }}
+            >
+              <Package className="h-14 w-14" />
+            </motion.div>
+            <p className="mt-6 font-medium">A abrir {chest.name}…</p>
+          </div>
+        ) : (
+          // Revelação
+          <div className="flex flex-col items-center py-4">
+            <motion.div
+              initial={reduce ? false : { scale: 0.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            >
+              <RewardReveal reward={reward} />
+            </motion.div>
+            <div className="mt-5 text-lg font-bold">{revealTitle(reward)}</div>
+            <div className="mt-1 text-sm text-muted-foreground">{revealSubtitle(reward)}</div>
+            <button onClick={onClose} className="mt-6 rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+              Boa!
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function RewardReveal({ reward }: { reward: ChestReward }) {
+  if (reward.kind === "item") {
+    const r = RARITY[reward.rarity] ?? RARITY.COMMON;
+    return (
+      <div className={cn("relative")}>
+        <span className="absolute -inset-6 -z-10 rounded-full blur-2xl" style={{ background: "radial-gradient(circle, hsl(var(--primary)/0.4), transparent 70%)" }} />
+        <ItemVisual item={{ type: reward.type, rarity: reward.rarity, payload: reward.payload }} size="lg" />
+      </div>
+    );
+  }
+  const icon = reward.kind === "boost" ? <Zap className="h-10 w-10" /> : <BookOpen className="h-10 w-10" />;
+  const tint = reward.kind === "boost" ? "#f59e0b" : "hsl(var(--primary))";
+  return (
+    <div className="flex h-20 w-20 items-center justify-center rounded-2xl" style={{ backgroundColor: reward.kind === "boost" ? "#f59e0b1f" : "hsl(var(--primary)/0.12)", color: tint }}>
+      {icon}
+    </div>
+  );
+}
+
+function revealTitle(reward: ChestReward): string {
+  switch (reward.kind) {
+    case "books": return `+${reward.books} books`;
+    case "boost": return reward.itemName;
+    case "duplicate": return reward.itemName;
+    case "item": return reward.itemName;
+  }
+}
+function revealSubtitle(reward: ChestReward): string {
+  switch (reward.kind) {
+    case "books": return "Moedas para a loja";
+    case "boost": return "Boost ativado!";
+    case "duplicate": return `Já tinhas — recebeste +${reward.refund} books`;
+    case "item": return `${RARITY[reward.rarity]?.label ?? reward.rarity} desbloqueado`;
+  }
 }
 
 // ── Cartão de item da loja ──

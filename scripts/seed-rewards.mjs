@@ -1,10 +1,10 @@
-// Seed idempotente do catálogo da loja (G2a). Corre com:
+// Seed idempotente do catálogo da loja (G2a + G2b). Corre com:
 //   set -a; . ./.env.local; set +a; node scripts/seed-rewards.mjs
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-/** Catálogo inicial — assets procedurais (sem ficheiros). */
+/** Catálogo — assets procedurais (sem ficheiros). */
 const ITEMS = [
   // ── Badges (ícone Lucide + cor; moldura vem da raridade) ──
   { code: "badge_flame", type: "BADGE", name: "Chama de Estudo", description: "Mantém o ritmo aceso.", rarity: "COMMON", cost: 40, requiredLevel: 1, payload: { icon: "Flame", color: "#f97316" } },
@@ -26,27 +26,70 @@ const ITEMS = [
   { code: "banner_sunset", type: "BANNER", name: "Pôr do Sol", description: "Quente e vibrante.", rarity: "RARE", cost: 90, requiredLevel: 2, payload: { gradient: "linear-gradient(135deg,#f97316,#ef4444,#ec4899)" } },
   { code: "banner_aurora", type: "BANNER", name: "Aurora", description: "Luzes do norte.", rarity: "EPIC", cost: 90, requiredLevel: 2, featured: true, payload: { gradient: "linear-gradient(135deg,#6366f1,#a855f7,#ec4899)" } },
   { code: "banner_mint", type: "BANNER", name: "Menta", description: "Fresco e luminoso.", rarity: "LEGENDARY", cost: 180, requiredLevel: 4, payload: { gradient: "linear-gradient(135deg,#10b981,#06b6d4,#3b82f6)" } },
+
+  // ── Boosts (efeito temporário; ao comprar/ganhar, ativa StudentBoost) ──
+  { code: "boost_xp2_6", type: "BOOST", name: "XP a Dobrar (6h)", description: "XP a dobrar durante 6 horas.", rarity: "RARE", cost: 60, requiredLevel: 2, payload: { boostType: "DOUBLE_XP", durationH: 6, multiplier: 2, icon: "Zap", color: "#f59e0b" } },
+  { code: "boost_xp2_24", type: "BOOST", name: "XP a Dobrar (24h)", description: "XP a dobrar durante 24 horas.", rarity: "EPIC", cost: 150, requiredLevel: 3, payload: { boostType: "DOUBLE_XP", durationH: 24, multiplier: 2, icon: "Zap", color: "#f59e0b" } },
+
+  // ── Baús (consumíveis; ao abrir, sorteia da loot table) ──
+  { code: "chest_bronze", type: "CHEST", name: "Baú de Bronze", description: "Recompensa surpresa para começar.", rarity: "COMMON", cost: 30, requiredLevel: 1, payload: { tier: "bronze", icon: "Package", color: "#b45309" } },
+  { code: "chest_silver", type: "CHEST", name: "Baú de Prata", description: "Melhores hipóteses de raros.", rarity: "RARE", cost: 70, requiredLevel: 2, payload: { tier: "silver", icon: "Package", color: "#64748b" } },
+  { code: "chest_gold", type: "CHEST", name: "Baú de Ouro", description: "Pode conter lendários e boosts.", rarity: "EPIC", cost: 140, requiredLevel: 4, featured: true, payload: { tier: "gold", icon: "Package", color: "#f59e0b" } },
 ];
 
-let created = 0;
+// Loot tables: { chest: code, item?: code, books?: n, weight }
+const DROPS = [
+  { chest: "chest_bronze", books: 10, weight: 5 },
+  { chest: "chest_bronze", books: 25, weight: 3 },
+  { chest: "chest_bronze", item: "badge_flame", weight: 2 },
+  { chest: "chest_bronze", item: "badge_star", weight: 2 },
+  { chest: "chest_bronze", item: "palette_pastel", weight: 1 },
+
+  { chest: "chest_silver", books: 35, weight: 4 },
+  { chest: "chest_silver", item: "badge_book", weight: 2 },
+  { chest: "chest_silver", item: "badge_brain", weight: 2 },
+  { chest: "chest_silver", item: "palette_ocean", weight: 2 },
+  { chest: "chest_silver", item: "banner_sunset", weight: 1 },
+  { chest: "chest_silver", item: "boost_xp2_6", weight: 1 },
+
+  { chest: "chest_gold", books: 70, weight: 3 },
+  { chest: "chest_gold", item: "badge_rocket", weight: 2 },
+  { chest: "chest_gold", item: "badge_crown", weight: 2 },
+  { chest: "chest_gold", item: "palette_forest", weight: 2 },
+  { chest: "chest_gold", item: "banner_aurora", weight: 1 },
+  { chest: "chest_gold", item: "boost_xp2_24", weight: 1 },
+  { chest: "chest_gold", item: "badge_gem", weight: 1 },
+];
+
+// 1) Upsert dos itens
 for (const it of ITEMS) {
   await prisma.rewardItem.upsert({
     where: { code: it.code },
     create: it,
     update: {
-      type: it.type,
-      name: it.name,
-      description: it.description,
-      rarity: it.rarity,
-      cost: it.cost,
-      requiredLevel: it.requiredLevel,
-      featured: it.featured ?? false,
-      payload: it.payload,
-      active: true,
+      type: it.type, name: it.name, description: it.description, rarity: it.rarity,
+      cost: it.cost, requiredLevel: it.requiredLevel, featured: it.featured ?? false,
+      payload: it.payload, active: true,
     },
   });
-  created += 1;
 }
 
-console.log(`Seed concluído: ${created} itens (upsert por code).`);
+// 2) Reconstruir as loot tables (idempotente: limpa drops dos baús e recria)
+const byCode = Object.fromEntries(
+  (await prisma.rewardItem.findMany({ select: { id: true, code: true } })).map((r) => [r.code, r.id]),
+);
+const chestCodes = [...new Set(DROPS.map((d) => d.chest))];
+for (const cc of chestCodes) {
+  await prisma.chestDrop.deleteMany({ where: { chestId: byCode[cc] } });
+}
+await prisma.chestDrop.createMany({
+  data: DROPS.map((d) => ({
+    chestId: byCode[d.chest],
+    itemId: d.item ? byCode[d.item] : null,
+    books: d.books ?? 0,
+    weight: d.weight,
+  })),
+});
+
+console.log(`Seed concluído: ${ITEMS.length} itens, ${DROPS.length} drops.`);
 await prisma.$disconnect();
