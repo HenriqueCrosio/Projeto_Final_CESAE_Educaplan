@@ -206,7 +206,7 @@ export function RewardShop({
   const fade = reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 
   return (
-    <div className="mx-auto max-w-5xl p-8">
+    <div className="mx-auto max-w-7xl p-6 sm:p-8">
       {/* Hero imersivo da loja */}
       <div className="relative overflow-hidden rounded-3xl border bg-card p-6 sm:p-8">
         {/* Backdrop animado (decorativo) */}

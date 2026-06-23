@@ -13,7 +13,7 @@ export default async function StudentClassesPage() {
   const classes = await getMyClasses();
 
   return (
-    <div className="mx-auto max-w-5xl p-8">
+    <div className="mx-auto max-w-7xl p-6 sm:p-8">
       <h1 className="mb-1 text-2xl font-bold tracking-tight">As minhas turmas</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Turmas onde estás inscrito. Abre uma para ver agenda, exames e materiais.
@@ -27,7 +27,7 @@ export default async function StudentClassesPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {classes.map((c) => {
             const tName = teacherName(c.teacher);
             return (
