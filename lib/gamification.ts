@@ -111,14 +111,6 @@ export async function awardActivity(
       update: {},
     });
 
-    // Boost ativo (ex.: XP a dobrar) multiplica só o XP ganho.
-    const boost = await tx.studentBoost.findFirst({
-      where: { studentId, type: "DOUBLE_XP", expiresAt: { gt: new Date() } },
-      orderBy: { multiplier: "desc" },
-      select: { multiplier: true },
-    });
-    const xp = boost ? Math.round(baseXp * boost.multiplier) : baseXp;
-
     const today = utcDay(new Date());
     const last = profile.lastActivityOn ? utcDay(profile.lastActivityOn) : null;
     let streak: number;
@@ -131,6 +123,17 @@ export async function awardActivity(
       else streak = 1;
     }
     const longestStreak = Math.max(profile.longestStreak, streak);
+
+    // Bónus de streak: +2% de XP por dia seguido, até +60% (cap 30 dias).
+    const streakMult = 1 + Math.min(streak, 30) * 0.02;
+    // Boost ativo (ex.: XP a dobrar) multiplica por cima do bónus de streak.
+    const boost = await tx.studentBoost.findFirst({
+      where: { studentId, type: "DOUBLE_XP", expiresAt: { gt: new Date() } },
+      orderBy: { multiplier: "desc" },
+      select: { multiplier: true },
+    });
+    let xp = Math.round(baseXp * streakMult);
+    if (boost) xp = Math.round(xp * boost.multiplier);
 
     const newXp = profile.xp + xp;
     const level = levelFromXp(newXp);

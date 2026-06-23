@@ -5,6 +5,7 @@ import { getCurrentStudentId } from "@/lib/auth";
 import {
   awardActivity,
   hasActivityTodayOfType,
+  hasActivityForRef,
   levelProgress,
 } from "@/lib/gamification";
 
@@ -42,5 +43,52 @@ export async function recordDailyCheckin(): Promise<void> {
     }
   } catch {
     // Sem sessão de aluno ou falha pontual — ignora.
+  }
+}
+
+export type MarkResult = { ok: true; xp: number; books: number; already?: boolean } | { ok: false };
+
+/** Marca uma aula agendada como vista (1× por agendamento). Valida pertença à turma. */
+export async function markLessonDone(scheduleId: string): Promise<MarkResult> {
+  try {
+    const studentId = await getCurrentStudentId();
+    const schedule = await prisma.lessonSchedule.findFirst({
+      where: { id: scheduleId, class: { students: { some: { id: studentId } } } },
+      select: { id: true },
+    });
+    if (!schedule) return { ok: false };
+    if (await hasActivityForRef(studentId, "LESSON_DONE", scheduleId)) {
+      return { ok: true, xp: 0, books: 0, already: true };
+    }
+    const { xp, books } = await awardActivity(studentId, "LESSON_DONE", { refId: scheduleId });
+    return { ok: true, xp, books };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** Marca um material como lido (1× por material). Valida acesso via turma/curso. */
+export async function markMaterialRead(materialId: string): Promise<MarkResult> {
+  try {
+    const studentId = await getCurrentStudentId();
+    const material = await prisma.material.findFirst({
+      where: {
+        id: materialId,
+        OR: [
+          { course: { classes: { some: { students: { some: { id: studentId } } } } } },
+          { module: { course: { classes: { some: { students: { some: { id: studentId } } } } } } },
+          { topic: { module: { course: { classes: { some: { students: { some: { id: studentId } } } } } } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!material) return { ok: false };
+    if (await hasActivityForRef(studentId, "MATERIAL_READ", materialId)) {
+      return { ok: true, xp: 0, books: 0, already: true };
+    }
+    const { xp, books } = await awardActivity(studentId, "MATERIAL_READ", { refId: materialId });
+    return { ok: true, xp, books };
+  } catch {
+    return { ok: false };
   }
 }

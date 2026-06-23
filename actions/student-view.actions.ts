@@ -196,5 +196,26 @@ export async function getMyClassDetail(classId: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return { class: klass, schedules, exams, materials };
+  // Marcações de gamificação do aluno: aulas vistas / materiais lidos.
+  const scheduleIds = schedules.map((s) => s.id);
+  const materialIds = materials.map((m) => m.id);
+  const events = await prisma.activityEvent.findMany({
+    where: {
+      studentId,
+      OR: [
+        { type: "LESSON_DONE", refId: { in: scheduleIds } },
+        { type: "MATERIAL_READ", refId: { in: materialIds } },
+      ],
+    },
+    select: { type: true, refId: true },
+  });
+  const doneLessons = new Set(events.filter((e) => e.type === "LESSON_DONE").map((e) => e.refId));
+  const doneMaterials = new Set(events.filter((e) => e.type === "MATERIAL_READ").map((e) => e.refId));
+
+  return {
+    class: klass,
+    schedules: schedules.map((s) => ({ ...s, done: doneLessons.has(s.id) })),
+    exams,
+    materials: materials.map((m) => ({ ...m, done: doneMaterials.has(m.id) })),
+  };
 }
