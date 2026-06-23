@@ -207,31 +207,42 @@ export function RewardShop({
 
   return (
     <div className="mx-auto max-w-5xl p-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Recompensas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gasta <strong>books</strong> a desbloquear emblemas, cores e banners. O XP marca o teu nível — e nunca se perde.
-          </p>
-        </div>
-        {/* Saldo de books sempre à vista */}
-        <div className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 shadow-sm">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <motion.span key={books} initial={reduce ? false : { scale: 1.3 }} animate={{ scale: 1 }} className="text-lg font-bold tabular-nums">
-            {books}
-          </motion.span>
-          <span className="text-sm text-muted-foreground">books</span>
-        </div>
-      </div>
-
-      {/* Barra de progressão do nível */}
-      <div className="mt-5 rounded-xl border bg-card p-4 shadow-sm">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="flex items-center gap-2 font-medium"><Trophy className="h-4 w-4 text-primary" /> Nível {level}</span>
-          <span className="text-muted-foreground">{xp} XP · faltam {levelNeeded - levelInto} para o nível {level + 1}</span>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-primary/10">
-          <motion.div className="h-full rounded-full bg-primary" initial={{ width: 0 }} animate={{ width: `${levelPct}%` }} transition={{ duration: reduce ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }} />
+      {/* Hero imersivo da loja */}
+      <div className="relative overflow-hidden rounded-3xl border bg-card p-6 sm:p-8">
+        {/* Backdrop animado (decorativo) */}
+        {!reduce && (
+          <>
+            <motion.div aria-hidden className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-primary/25 blur-3xl" animate={{ x: [0, 28, 0], y: [0, 18, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} />
+            <motion.div aria-hidden className="pointer-events-none absolute -bottom-28 -right-10 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" animate={{ x: [0, -22, 0], y: [0, -14, 0] }} transition={{ duration: 19, repeat: Infinity, ease: "easeInOut" }} />
+          </>
+        )}
+        <div className="relative">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-md">
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Loja de Recompensas</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Gasta <strong>books</strong> a desbloquear emblemas, cores, banners e baús. O XP marca o teu nível — e nunca se perde.
+              </p>
+            </div>
+            {/* Saldo de books sempre à vista */}
+            <div className="flex items-center gap-2 rounded-2xl border bg-background/70 px-4 py-2.5 shadow-sm backdrop-blur">
+              <BookOpen className="h-6 w-6 text-primary" />
+              <motion.span key={books} initial={reduce ? false : { scale: 1.3 }} animate={{ scale: 1 }} className="text-2xl font-bold tabular-nums">
+                {books}
+              </motion.span>
+              <span className="text-sm text-muted-foreground">books</span>
+            </div>
+          </div>
+          {/* Progressão do nível */}
+          <div className="mt-6">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 font-medium"><Trophy className="h-4 w-4 text-primary" /> Nível {level}</span>
+              <span className="text-muted-foreground">{xp} XP · faltam {levelNeeded - levelInto} para o nível {level + 1}</span>
+            </div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
+              <motion.div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-400" initial={{ width: 0 }} animate={{ width: `${levelPct}%` }} transition={{ duration: reduce ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }} />
+            </div>
+          </div>
         </div>
       </div>
 
