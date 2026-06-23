@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, GraduationCap, Sparkles, Palette, Gift } from "lucide-react";
+import { Home, GraduationCap, Palette, Gift, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -10,6 +10,7 @@ const NAV = [
   { href: "/student/turmas", label: "Turmas", icon: GraduationCap, exact: false },
   { href: "/student/hub", label: "Hub de Estudos", icon: Palette, exact: false },
   { href: "/student/recompensas", label: "Recompensas", icon: Gift, exact: false },
+  { href: "/student/ambiente", label: "Ambiente", icon: Headphones, exact: false },
 ];
 
 export function StudentSidebar() {
@@ -40,14 +41,6 @@ export function StudentSidebar() {
           );
         })}
       </nav>
-
-      <div className="mt-auto rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-        <div className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          Ambiente de estudo
-        </div>
-        Em breve: o teu espaço pessoal com gamificação e ambiente lo-fi.
-      </div>
     </aside>
   );
 }
