@@ -4,10 +4,11 @@ import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   BookOpen, Trophy, Star, Flame, Brain, Target, Rocket, Crown, Gem, Award,
-  Check, Image as ImageIcon, Palette as PaletteIcon, Ban, Sparkles,
+  Check, Image as ImageIcon, Palette as PaletteIcon, Ban, Sparkles, Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { setHubBanner, setHubPalette, toggleFavoriteBadge, type OwnedCosmetic } from "@/actions/hub.actions";
+import { setMyDisplayName } from "@/actions/profile.actions";
 
 const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Flame, Star, BookOpen, Brain, Target, Rocket, Crown, Gem, Award,
@@ -34,7 +35,7 @@ function Badge({ item, size = "md" }: { item: OwnedCosmetic; size?: "sm" | "md" 
 }
 
 export function HubCustomizer(props: {
-  displayName: string;
+  displayName: string | null;
   level: number;
   xp: number;
   books: number;
@@ -49,6 +50,17 @@ export function HubCustomizer(props: {
   const [bannerId, setBannerId] = React.useState(props.bannerItemId);
   const [paletteId, setPaletteId] = React.useState(props.paletteItemId);
   const [favs, setFavs] = React.useState<string[]>(props.favoriteBadgeIds);
+  const [name, setName] = React.useState<string | null>(props.displayName);
+  const [editingName, setEditingName] = React.useState(false);
+  const [draft, setDraft] = React.useState(props.displayName ?? "");
+
+  async function saveName() {
+    const v = draft.trim();
+    setEditingName(false);
+    if (!v || v === name) return;
+    setName(v);
+    await setMyDisplayName(v).catch(() => {});
+  }
 
   const banner = props.banners.find((b) => b.id === bannerId);
   const palette = props.palettes.find((pp) => pp.id === paletteId);
@@ -90,11 +102,35 @@ export function HubCustomizer(props: {
             className="-mt-14 flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-card text-3xl font-bold text-white shadow-lg"
             style={{ backgroundColor: pal ? pal.accent : "hsl(var(--primary))" }}
           >
-            {props.displayName.charAt(0).toUpperCase()}
+            {(name ?? "?").charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-bold" style={pal ? { color: pal.accent } : undefined}>{props.displayName}</div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            {editingName ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") setEditingName(false);
+                }}
+                maxLength={60}
+                placeholder="O teu nome"
+                className="w-full max-w-xs rounded-md border bg-background px-2 py-1 text-lg font-bold outline-none focus:ring-2 focus:ring-ring"
+              />
+            ) : (
+              <button
+                onClick={() => { setDraft(name ?? ""); setEditingName(true); }}
+                className="group flex items-center gap-2 text-lg font-bold"
+                style={pal ? { color: pal.accent } : undefined}
+                title="Editar nome"
+              >
+                {name ?? "Define o teu nome"}
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+              </button>
+            )}
+            <div className="mt-0.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1"><Trophy className="h-3.5 w-3.5" /> Nível {props.level}</span>
               <span>{props.xp} XP</span>
               <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {props.books} books</span>

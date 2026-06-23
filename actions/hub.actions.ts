@@ -33,7 +33,7 @@ export async function getHubConfig() {
     items.filter((i) => i.type === t).map((i) => ({ id: i.id, name: i.name, rarity: i.rarity, type: i.type, payload: i.payload }));
 
   return {
-    displayName: student?.user.profile?.displayName || student?.user.email || "aluno",
+    displayName: student?.user.profile?.displayName ?? null,
     level: profile?.level ?? 1,
     xp: profile?.xp ?? 0,
     books: profile?.books ?? 0,

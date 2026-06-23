@@ -63,10 +63,21 @@ export default async function StudentHome() {
 
   return (
     <div className="mx-auto max-w-7xl p-6 sm:p-8">
-      <h1 className="text-2xl font-bold tracking-tight">Olá, {summary.displayName} 👋</h1>
+      <h1 className="text-2xl font-bold tracking-tight">
+        {summary.displayName ? `Olá, ${summary.displayName.split(" ")[0]} 👋` : "Olá! 👋"}
+      </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Bem-vindo ao teu espaço. Aqui tens tudo num só lugar.
       </p>
+      {!summary.displayName && (
+        <Link
+          href="/student/hub"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
+          Define o teu nome no Hub
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      )}
 
       {/* Faixa de gamificação (dados reais) */}
       <div className="mt-6 rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">

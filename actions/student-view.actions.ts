@@ -26,7 +26,7 @@ export async function getStudentHomeSummary() {
       user: { select: { profile: { select: { displayName: true } }, email: true } },
     },
   });
-  const displayName = student?.user.profile?.displayName || student?.user.email || "aluno";
+  const displayName = student?.user.profile?.displayName ?? null;
 
   // Turmas do aluno → módulos dos respetivos cursos.
   const classes = await prisma.class.findMany({
