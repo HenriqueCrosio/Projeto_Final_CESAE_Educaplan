@@ -96,6 +96,7 @@ model User {
   student     Student?
   admin       Admin?
   memberships Membership[]
+  preferences UserPreferences?
 
   @@index([email, isActive])
   @@index([userApiToken])
@@ -119,6 +120,19 @@ model Profile {
   birthDate   DateTime?
   phoneNumber String?
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Preferências pessoais (globais, 1:1 User): o tema de uma pessoa é dela
+// em qualquer organização, por isso NÃO tem organizationId.
+model UserPreferences {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme       String   @default("system") // "light" | "dark" | "system"
+  accentColor String? // override opcional da cor de marca (hex)
+  locale      String   @default("pt")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Role {

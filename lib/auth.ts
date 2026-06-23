@@ -55,6 +55,27 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
   };
 });
 
+/**
+ * User.id (identidade global) do utilizador autenticado, resolvido por email —
+ * o elo canónico entre as faces da conta. Útil para dados 1:1 User que valem em
+ * qualquer org (ex.: UserPreferences), independentes do papel. Deduplicado por request.
+ */
+export const getCurrentUserId = cache(async (): Promise<string> => {
+  const session = await getSession();
+  const email = session?.user?.email as string | undefined;
+  if (!email) {
+    throw new Error("Unauthorized: no authenticated session.");
+  }
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (!user) {
+    throw new Error("Unauthorized: user not found.");
+  }
+  return user.id;
+});
+
 const TEACHER_ROLES = ["OWNER", "ADMIN", "TEACHER"] as const;
 
 /**

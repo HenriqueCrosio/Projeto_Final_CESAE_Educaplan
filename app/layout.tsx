@@ -7,6 +7,8 @@ import { siteMetadata } from "@/components/page-head";
 import { PreloadResources } from "@/app/preload-resources";
 import { UserProvider } from "@auth0/nextjs-auth0/client";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ThemeSync } from "@/components/theme-sync";
+import { getStoredTheme } from "@/actions/preferences.actions";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -25,11 +27,14 @@ export const metadata = siteMetadata;
 // então não devem ser pré-renderizadas estaticamente no build.
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Tema persistido por-utilizador (null em páginas públicas/sem sessão).
+  const storedTheme = await getStoredTheme();
+
   return (
     <html lang="pt" suppressHydrationWarning>
       <PreloadResources />
@@ -38,10 +43,11 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme={storedTheme ?? "system"}
           enableSystem
           disableTransitionOnChange
         >
+          <ThemeSync serverTheme={storedTheme} />
           <UserProvider>
             <PageLayout>{children}</PageLayout>
           </UserProvider>
