@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentTeacherId, getCurrentOrganizationId } from "@/lib/auth";
+import { awardActivity, gradedBonus, hasActivityForRef } from "@/lib/gamification";
 
 /**
  * CORREÇÃO (lado do professor, S3c). Escopo por organizationId — as submissões
@@ -106,7 +107,12 @@ export async function gradeSubmission(submissionId: string, items: GradeItemInpu
 
   const submission = await prisma.examSubmission.findFirst({
     where: { id: submissionId, organizationId },
-    select: { id: true, answers: { select: { id: true } } },
+    select: {
+      id: true,
+      studentId: true,
+      examId: true,
+      answers: { select: { id: true, exercise: { select: { points: true } } } },
+    },
   });
   if (!submission) throw new Error("Submissão inválida ou sem permissão.");
 
@@ -137,6 +143,21 @@ export async function gradeSubmission(submissionId: string, items: GradeItemInpu
     where: { id: submissionId },
     data: { status: "GRADED", score, gradedAt: new Date(), gradedById: teacherId },
   });
+
+  // Gamificação (best-effort): premeia o aluno por exame avaliado, uma vez só.
+  try {
+    if (!(await hasActivityForRef(submission.studentId, "EXAM_GRADED", submission.examId))) {
+      const totalPoints = submission.answers.reduce((s, a) => s + a.exercise.points, 0);
+      const bonus = gradedBonus(totalPoints > 0 ? score / totalPoints : 0);
+      await awardActivity(submission.studentId, "EXAM_GRADED", {
+        refId: submission.examId,
+        bonusXp: bonus.xp,
+        bonusBooks: bonus.books,
+      });
+    }
+  } catch {
+    // Ganhos de gamificação nunca devem impedir a finalização da correção.
+  }
 
   return { score };
 }

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentStudentId } from "@/lib/auth";
+import { awardActivity, gradedBonus, hasActivityForRef } from "@/lib/gamification";
 
 /**
  * ESCRITA da ÁREA DO ALUNO (S3b) — fazer um exame + auto-correção.
@@ -216,6 +217,22 @@ export async function submitExam(examId: string, answers: AnswerInput[]) {
     });
   } catch {
     // Ignora falhas de notificação — não devem impedir o registo da submissão.
+  }
+
+  // Gamificação (best-effort): XP/Books por submeter e, se auto-corrigiu já, por avaliar.
+  try {
+    await awardActivity(studentId, "EXAM_SUBMITTED", { refId: examId });
+    if (status === "GRADED" && !(await hasActivityForRef(studentId, "EXAM_GRADED", examId))) {
+      const totalPoints = exam.exercises.reduce((s, ee) => s + ee.exercise.points, 0);
+      const bonus = gradedBonus(totalPoints > 0 ? autoScore / totalPoints : 0);
+      await awardActivity(studentId, "EXAM_GRADED", {
+        refId: examId,
+        bonusXp: bonus.xp,
+        bonusBooks: bonus.books,
+      });
+    }
+  } catch {
+    // Ganhos de gamificação nunca devem impedir a submissão.
   }
 
   return submission;

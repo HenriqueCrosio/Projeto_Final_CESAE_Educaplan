@@ -1,7 +1,6 @@
 import Link from "next/link";
-import {
-  getStudentHomeSummary,
-} from "@/actions/student-view.actions";
+import { getStudentHomeSummary } from "@/actions/student-view.actions";
+import { getMyGameProfile, recordDailyCheckin } from "@/actions/gamification.actions";
 import {
   GraduationCap,
   ClipboardList,
@@ -11,6 +10,7 @@ import {
   Flame,
   ArrowRight,
   CalendarDays,
+  BookOpen,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,16 @@ function StatCard({
 }
 
 export default async function StudentHome() {
-  const summary = await getStudentHomeSummary();
+  // Check-in diário (idempotente) ANTES de ler o perfil, para refletir hoje.
+  await recordDailyCheckin();
+  const [summary, game] = await Promise.all([
+    getStudentHomeSummary(),
+    getMyGameProfile(),
+  ]);
+
+  const levelPct = game.levelNeeded
+    ? Math.min(100, Math.round((game.levelInto / game.levelNeeded) * 100))
+    : 0;
 
   return (
     <div className="mx-auto max-w-5xl p-8">
@@ -59,21 +68,36 @@ export default async function StudentHome() {
         Bem-vindo ao teu espaço. Aqui tens tudo num só lugar.
       </p>
 
-      {/* Faixa de gamificação (placeholder até S4.4b) */}
-      <div className="mt-6 flex flex-wrap items-center gap-4 rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
-          <Trophy className="h-6 w-6" />
-        </span>
-        <div className="flex-1">
-          <div className="font-semibold">Nível 1 · 0 XP</div>
-          <div className="text-xs text-muted-foreground">
-            Faz exames e ganha XP. Sobe de nível e desbloqueia badges.
+      {/* Faixa de gamificação (dados reais) */}
+      <div className="mt-6 rounded-xl border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Trophy className="h-6 w-6" />
+          </span>
+          <div className="min-w-[10rem] flex-1">
+            <div className="font-semibold">
+              Nível {game.level} · {game.xp} XP
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {game.levelNeeded - game.levelInto} XP para o nível {game.level + 1}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <span className="font-medium">{game.books}</span>
+            <span className="text-muted-foreground">books</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <span className="font-medium">{game.currentStreak}</span>
+            <span className="text-muted-foreground">
+              {game.currentStreak === 1 ? "dia seguido" : "dias seguidos"}
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-sm shadow-sm">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <span className="font-medium">0</span>
-          <span className="text-muted-foreground">dias seguidos</span>
+        {/* Barra de progresso para o próximo nível */}
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-primary/10">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${levelPct}%` }} />
         </div>
       </div>
 

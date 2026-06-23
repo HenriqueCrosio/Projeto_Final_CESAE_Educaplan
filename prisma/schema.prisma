@@ -227,6 +227,8 @@ model Student {
   teams           Team[]
   examSubmissions ExamSubmission[]
   notifications   Notification[]
+  gameProfile     StudentGameProfile?
+  activityEvents  ActivityEvent[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   comments        Comment[]
@@ -235,6 +237,47 @@ model Student {
   addedBy         Teacher?         @relation("AddedStudents", fields: [addedById], references: [id])
 
   @@index([studentId])
+}
+
+// ── Gamificação (G1) — Student é global, logo o perfil de jogo é global 1:1 ──
+
+enum ActivityType {
+  EXAM_SUBMITTED
+  EXAM_GRADED
+  DAILY_CHECKIN
+  LESSON_DONE
+  MATERIAL_READ
+}
+
+// Perfil de jogo do aluno: XP (acumula -> nível, nunca gasta) + Books (moeda
+// gastável na loja) + streak de dias de estudo.
+model StudentGameProfile {
+  id             String    @id @default(cuid())
+  studentId      String    @unique
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  xp             Int       @default(0)
+  level          Int       @default(1)
+  books          Int       @default(0)
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActivityOn DateTime? @db.Date // último DIA com atividade (base do streak)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// Log de atividades premiadas: fonte do streak e auditoria dos ganhos.
+model ActivityEvent {
+  id        String       @id @default(cuid())
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type      ActivityType
+  xp        Int          @default(0)
+  books     Int          @default(0)
+  refId     String? // examId / lessonId / materialId conforme o tipo
+  createdAt DateTime     @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([studentId, type, refId])
 }
 
 model Course {
