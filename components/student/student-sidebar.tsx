@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, GraduationCap, Sparkles } from "lucide-react";
+import { Home, GraduationCap, Sparkles, Palette, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/student", label: "Início", icon: Home, exact: true },
   { href: "/student/turmas", label: "Turmas", icon: GraduationCap, exact: false },
+  { href: "/student/hub", label: "Hub de Estudos", icon: Palette, exact: false },
+  { href: "/student/recompensas", label: "Recompensas", icon: Gift, exact: false },
 ];
 
 export function StudentSidebar() {
