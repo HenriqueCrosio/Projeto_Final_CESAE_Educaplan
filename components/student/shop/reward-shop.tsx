@@ -131,6 +131,7 @@ export function RewardShop({
   const [hovered, setHovered] = React.useState<ShopItem | null>(null);
   const [toast, setToast] = React.useState<{ msg: string; ok: boolean } | null>(null);
   const [chestOpen, setChestOpen] = React.useState<{ chest: ShopItem; reward: ChestReward | null } | null>(null);
+  const [pending, setPending] = React.useState<{ item: ShopItem; type: "buy" | "boost" | "chest" } | null>(null);
 
   const setAffordability = (b: number) =>
     setItems((prev) => prev.map((i) => ({ ...i, affordable: b >= i.cost })));
@@ -187,6 +188,15 @@ export function RewardShop({
     return () => clearTimeout(t);
   }, [toast]);
 
+  React.useEffect(() => {
+    if (!pending) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPending(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pending]);
+
   async function handleBuy(item: ShopItem) {
     if (buying || item.owned || item.locked || !item.affordable) return;
     setBuying(item.id);
@@ -202,6 +212,17 @@ export function RewardShop({
       setToast({ msg: res.error, ok: false });
     }
   }
+
+  // Confirmação antes de gastar books (irreversível) — prevenção de erro.
+  function confirmPending() {
+    if (!pending) return;
+    const { item, type } = pending;
+    setPending(null);
+    if (type === "buy") handleBuy(item);
+    else if (type === "boost") handleBuyBoost(item);
+    else handleOpenChest(item);
+  }
+  const confirmVerb = pending?.type === "chest" ? "Abrir" : pending?.type === "boost" ? "Ativar" : "Comprar";
 
   const fade = reduce ? {} : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 } };
 
@@ -269,7 +290,7 @@ export function RewardShop({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {featured.map((item) => (
-              <FeaturedCard key={item.id} item={item} onBuy={handleBuy} buying={buying === item.id} />
+              <FeaturedCard key={item.id} item={item} onBuy={(i) => setPending({ item: i, type: "buy" })} buying={buying === item.id} />
             ))}
           </div>
         </div>
@@ -304,13 +325,13 @@ export function RewardShop({
       ) : tab === "CHEST" ? (
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {chests.map((c) => (
-            <ChestCard key={c.id} chest={c} busy={!!chestOpen} onOpen={handleOpenChest} />
+            <ChestCard key={c.id} chest={c} busy={!!chestOpen} onOpen={(i) => setPending({ item: i, type: "chest" })} />
           ))}
         </div>
       ) : tab === "BOOST" ? (
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {boosts.map((b) => (
-            <BoostCard key={b.id} boost={b} buying={buying === b.id} onBuy={handleBuyBoost} />
+            <BoostCard key={b.id} boost={b} buying={buying === b.id} onBuy={(i) => setPending({ item: i, type: "boost" })} />
           ))}
         </div>
       ) : (
@@ -325,7 +346,7 @@ export function RewardShop({
                   transition={{ duration: reduce ? 0 : 0.3, delay: reduce ? 0 : i * 0.03, ease: [0.22, 1, 0.36, 1] }}
                   onMouseEnter={() => setHovered(item)}
                 >
-                  <RewardCard item={item} buying={buying === item.id} bought={bought === item.id} onBuy={handleBuy} />
+                  <RewardCard item={item} buying={buying === item.id} bought={bought === item.id} onBuy={(i) => setPending({ item: i, type: "buy" })} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -360,6 +381,41 @@ export function RewardShop({
             )}
           >
             {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmação de gasto (prevenção de erro) */}
+      <AnimatePresence>
+        {pending && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm"
+            onClick={() => setPending(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <motion.div
+              initial={reduce ? false : { scale: 0.95, y: 8 }} animate={{ scale: 1, y: 0 }}
+              className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <p className="text-base font-semibold">{confirmVerb} “{pending.item.name}”?</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Vais gastar <strong>{pending.item.cost} books</strong> · ficas com {books - pending.item.cost}.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <button onClick={() => setPending(null)} className="flex-1 rounded-lg border py-2 text-sm font-medium transition-colors hover:bg-accent">
+                  Cancelar
+                </button>
+                <button autoFocus onClick={confirmPending} className="flex-1 rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+                  {confirmVerb}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
