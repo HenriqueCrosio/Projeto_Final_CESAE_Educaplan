@@ -19,7 +19,11 @@ export const PageLayout: React.FC<PropsWithChildren> = ({ children }) => {
   return (
     <div className="page-layout">
       <NavBar />
-      <div className="">{children}</div>
+      {/* Dono de scroll por omissão: toda a rota abaixo da navbar (3.5rem) rola
+          aqui. Áreas com sidebar (dashboard/aluno) limitam a própria altura, logo
+          não duplicam scroll. body é overflow-hidden, então sem isto rotas sem
+          layout próprio (profile/developer/onboarding) ficam cortadas. */}
+      <div className="h-[calc(100dvh-3.5rem)] overflow-y-auto">{children}</div>
     </div>
   );
 };
