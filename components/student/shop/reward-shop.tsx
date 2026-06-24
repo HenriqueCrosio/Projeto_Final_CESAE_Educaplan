@@ -4,10 +4,11 @@ import * as React from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   BookOpen, Trophy, Lock, Check, Sparkles, Star, Flame, Brain, Target,
-  Rocket, Crown, Gem, Palette as PaletteIcon, Image as ImageIcon, Award, ShoppingBag,
+  Rocket, Crown, Gem, Palette as PaletteIcon, Image as ImageIcon, Award,
   Package, Zap, Gift, X, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RARITY } from "@/lib/rarity";
 import {
   buyItem, buyBoost, openChest, type ShopItem, type ChestReward,
 } from "@/actions/shop.actions";
@@ -17,28 +18,16 @@ const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   Flame, Star, BookOpen, Brain, Target, Rocket, Crown, Gem, Award, Zap, Package,
 };
 
-// ── Sistema de raridade: moldura + brilho + etiqueta (sistema semântico) ──
-const RARITY: Record<
-  string,
-  { label: string; ring: string; glow: string; chip: string; order: number }
-> = {
-  COMMON: { label: "Comum", ring: "ring-slate-300 dark:ring-slate-600", glow: "", chip: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300", order: 0 },
-  RARE: { label: "Raro", ring: "ring-sky-400 dark:ring-sky-500", glow: "shadow-[0_0_22px_-6px_rgba(56,189,248,0.7)]", chip: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300", order: 1 },
-  EPIC: { label: "Épico", ring: "ring-violet-400 dark:ring-violet-500", glow: "shadow-[0_0_26px_-5px_rgba(167,139,250,0.75)]", chip: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300", order: 2 },
-  LEGENDARY: { label: "Lendário", ring: "ring-amber-400 dark:ring-amber-400", glow: "shadow-[0_0_30px_-4px_rgba(251,191,36,0.85)]", chip: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", order: 3 },
-};
-
 type PayloadAny = Record<string, string> | null | undefined;
 const pl = (p: unknown) => (p ?? {}) as Record<string, string>;
 
-type Tab = "BADGE" | "PALETTE" | "BANNER" | "CHEST" | "BOOST" | "COLLECTION";
+type Tab = "BADGE" | "PALETTE" | "BANNER" | "CHEST" | "BOOST";
 const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "BADGE", label: "Badges", icon: Award },
   { id: "PALETTE", label: "Paletas", icon: PaletteIcon },
   { id: "BANNER", label: "Banners", icon: ImageIcon },
   { id: "CHEST", label: "Baús", icon: Package },
   { id: "BOOST", label: "Boosts", icon: Zap },
-  { id: "COLLECTION", label: "Coleção", icon: ShoppingBag },
 ];
 
 function timeLeft(expiresAt: Date): string {
@@ -105,7 +94,7 @@ function HubPreview({ palette, banner }: { palette?: PayloadAny; banner?: Payloa
 }
 
 export function RewardShop({
-  items: initialItems, books: initialBooks, level, xp, levelInto, levelNeeded, collection,
+  items: initialItems, books: initialBooks, level, xp, levelInto, levelNeeded,
   chests: initialChests, boosts: initialBoosts, activeBoost: initialBoost,
 }: {
   items: ShopItem[];
@@ -117,7 +106,6 @@ export function RewardShop({
   chests: ShopItem[];
   boosts: ShopItem[];
   activeBoost: { multiplier: number; expiresAt: Date } | null;
-  collection: { id: string; code: string; type: string; name: string; rarity: string; payload: unknown; acquiredAt: Date }[];
 }) {
   const reduce = useReducedMotion();
   const [items, setItems] = React.useState(initialItems);
@@ -234,7 +222,7 @@ export function RewardShop({
         {!reduce && (
           <>
             <motion.div aria-hidden className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-primary/25 blur-3xl" animate={{ x: [0, 28, 0], y: [0, 18, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} />
-            <motion.div aria-hidden className="pointer-events-none absolute -bottom-28 -right-10 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" animate={{ x: [0, -22, 0], y: [0, -14, 0] }} transition={{ duration: 19, repeat: Infinity, ease: "easeInOut" }} />
+            <motion.div aria-hidden className="pointer-events-none absolute -bottom-28 -right-10 h-72 w-72 rounded-full bg-amber-500/20 blur-3xl" animate={{ x: [0, -22, 0], y: [0, -14, 0] }} transition={{ duration: 19, repeat: Infinity, ease: "easeInOut" }} />
           </>
         )}
         <div className="relative">
@@ -261,7 +249,7 @@ export function RewardShop({
               <span className="text-muted-foreground">{xp} XP · faltam {levelNeeded - levelInto} para o nível {level + 1}</span>
             </div>
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/10">
-              <motion.div className="h-full rounded-full bg-gradient-to-r from-primary to-violet-400" initial={{ width: 0 }} animate={{ width: `${levelPct}%` }} transition={{ duration: reduce ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }} />
+              <motion.div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300" initial={{ width: 0 }} animate={{ width: `${levelPct}%` }} transition={{ duration: reduce ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }} />
             </div>
           </div>
         </div>
@@ -320,9 +308,7 @@ export function RewardShop({
       </div>
 
       {/* Conteúdo da tab */}
-      {tab === "COLLECTION" ? (
-        <Collection collection={collection} />
-      ) : tab === "CHEST" ? (
+      {tab === "CHEST" ? (
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {chests.map((c) => (
             <ChestCard key={c.id} chest={c} busy={!!chestOpen} onOpen={(i) => setPending({ item: i, type: "chest" })} />
@@ -679,25 +665,3 @@ function FeaturedCard({ item, onBuy, buying }: { item: ShopItem; onBuy: (i: Shop
   );
 }
 
-// ── Coleção ──
-function Collection({ collection }: { collection: { id: string; type: string; name: string; rarity: string; payload: unknown }[] }) {
-  if (collection.length === 0) {
-    return (
-      <div className="mt-6 rounded-2xl border bg-card p-10 text-center shadow-sm">
-        <ShoppingBag className="mx-auto h-8 w-8 text-muted-foreground/60" />
-        <p className="mt-3 text-sm text-muted-foreground">Ainda não desbloqueaste nada. Ganha books a estudar e começa a colecionar!</p>
-      </div>
-    );
-  }
-  return (
-    <div className="mt-5 grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {collection.map((item) => (
-        <div key={item.id} className="flex flex-col items-center rounded-2xl border bg-card p-5 text-center shadow-sm">
-          <ItemVisual item={item} />
-          <div className="mt-3 text-sm font-semibold">{item.name}</div>
-          <div className="text-xs text-muted-foreground">{RARITY[item.rarity]?.label ?? item.rarity}</div>
-        </div>
-      ))}
-    </div>
-  );
-}

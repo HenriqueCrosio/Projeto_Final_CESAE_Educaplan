@@ -1,9 +1,7 @@
-import { getHubConfig } from "@/actions/hub.actions";
-import { HubCustomizer } from "@/components/student/hub/hub-customizer";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function StudentHubPage() {
-  const config = await getHubConfig();
-  return <HubCustomizer {...config} />;
+// O Hub foi fundido com o Início (página pessoal configurável). Mantemos o
+// redirect para não partir links/bookmarks antigos.
+export default function HubRedirect() {
+  redirect("/student");
 }
