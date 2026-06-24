@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import { Manrope, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 
 import React from "react";
@@ -10,10 +11,17 @@ import { ThemeProvider } from "@/providers/theme-provider";
 import { ThemeSync } from "@/components/theme-sync";
 import { getStoredTheme } from "@/actions/preferences.actions";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+// Tipografia (reimagine): Manrope no corpo/UI + Bricolage Grotesque nos títulos.
+const fontSans = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const fontDisplay = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
+  weight: ["600", "700", "800"],
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
@@ -39,7 +47,7 @@ export default async function RootLayout({
     <html lang="pt" suppressHydrationWarning>
       <PreloadResources />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${fontSans.variable} ${fontDisplay.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
