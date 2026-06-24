@@ -26,6 +26,15 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ── Vitrine pública (C1): só montra; o conteúdo continua fechado por turma. ──
+  // Abordagem procedural: URLs coláveis (sem upload/storage). brandColor = hex.
+  isPublic    Boolean @default(false)
+  headline    String?
+  description String? @db.Text
+  bannerUrl   String?
+  logoUrl     String?
+  brandColor  String?
+
   memberships       Membership[]
   courses           Course[]
   modules           Module[]
@@ -366,6 +375,7 @@ enum StudentResourceKind {
   LINK
   YOUTUBE
   SPOTIFY
+  APPLE_MUSIC
 }
 
 model StudentResource {

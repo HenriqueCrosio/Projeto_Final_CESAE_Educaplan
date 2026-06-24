@@ -79,6 +79,7 @@ getGestaoGroups: async (): Promise<NavGroup[]> => {
       { id: "configurar", title: "Criar matrícula", href: "/dashboard/gestao/configurar", description: "Matricular turmas num curso e definir preços" },
       { id: "enrolment", title: "Matrículas", href: "/dashboard/gestao", description: "Ver as matrículas criadas" },
       { id: "lesson-plans", title: "Marcação de aulas", href: "/dashboard/gestao/aulas", description: "Agendar aulas no calendário" },
+      { id: "pagina-publica", title: "Página pública", href: "/dashboard/pagina-publica", description: "Editar a vitrine pública da organização" },
 
     ]),
   ];
