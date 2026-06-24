@@ -13,6 +13,7 @@ function detectKind(url: string): StudentResourceKind {
   const u = url.toLowerCase();
   if (u.includes("youtube.com") || u.includes("youtu.be")) return "YOUTUBE";
   if (u.includes("open.spotify.com") || u.includes("spotify:")) return "SPOTIFY";
+  if (u.includes("music.apple.com")) return "APPLE_MUSIC";
   return "LINK";
 }
 
