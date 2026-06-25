@@ -145,42 +145,42 @@ export default function AreaFinanceira() {
 
       {/* Resumo Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-blue-400 text-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Total Recebido</h3>
-            <CurrencyEuroIcon className="h-8 w-8" />
-          </div>
-          <p className="text-3xl font-bold mt-2">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
+            <CurrencyEuroIcon className="h-[18px] w-[18px]" />
+          </span>
+          <p className="font-display text-3xl font-semibold leading-none tracking-tight text-foreground">
             €
             {courses
               .reduce((sum, course) => sum + course.totalEarned, 0)
               .toFixed(2)}
           </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Total Recebido</p>
         </div>
-        <div className="bg-green-400 text-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Cursos Ativos</h3>
-            <AcademicCapIcon className="h-8 w-8" />
-          </div>
-          <p className="text-3xl font-bold mt-2">{courses.length}</p>
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/15 dark:text-emerald-400">
+            <AcademicCapIcon className="h-[18px] w-[18px]" />
+          </span>
+          <p className="font-display text-3xl font-semibold leading-none tracking-tight text-foreground">{courses.length}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Cursos Ativos</p>
         </div>
-        <div className="bg-gray-900 text-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Total Pendente</h3>
-            <ClockIcon className="h-8 w-8" />
-          </div>
-          <p className="text-3xl font-bold mt-2">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 ring-1 ring-inset ring-amber-500/15 dark:text-amber-400">
+            <ClockIcon className="h-[18px] w-[18px]" />
+          </span>
+          <p className="font-display text-3xl font-semibold leading-none tracking-tight text-foreground">
             €
             {courses
               .reduce((sum, course) => sum + course.pendingPayment, 0)
               .toFixed(2)}
           </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Total Pendente</p>
         </div>
       </div>
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="text-xl font-semibold mb-4">Desempenho Financeiro</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={performanceData}>
@@ -194,7 +194,7 @@ export default function AreaFinanceira() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="text-xl font-semibold mb-4">
             Distribuição de Receita por Curso
           </h3>
@@ -224,12 +224,12 @@ export default function AreaFinanceira() {
       </div>
 
       {/* Lançamentos e Tabela de Cursos */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+      <div className="rounded-xl border bg-card p-6 shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold">Lançamentos e Cursos</h3>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-600 flex items-center"
+            className="bg-foreground text-background px-4 py-2 rounded-lg hover:opacity-90 transition flex items-center"
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Novo Lançamento
@@ -238,8 +238,8 @@ export default function AreaFinanceira() {
 
         {/* Tabela de Lançamentos */}
         <div className="overflow-x-auto mb-6">
-          <table className="min-w-full bg-white">
-            <thead className="bg-gray-100">
+          <table className="min-w-full">
+            <thead className="bg-muted text-muted-foreground">
               <tr>
                 <th className="py-2 px-4 text-left">Data</th>
                 <th className="py-2 px-4 text-left">Curso</th>
@@ -260,8 +260,8 @@ export default function AreaFinanceira() {
                     <span
                       className={`px-2 py-1 rounded ${
                         invoice.paid
-                          ? "bg-green-200 text-green-800"
-                          : "bg-red-200 text-red-800"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-rose-500/15 text-rose-700 dark:text-rose-400"
                       }`}
                     >
                       {invoice.paid ? "Pago" : "Pendente"}
@@ -272,8 +272,8 @@ export default function AreaFinanceira() {
                       onClick={() => toggleInvoicePaid(invoice.id)}
                       className={`p-1 rounded ${
                         invoice.paid
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
+                          ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                          : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
                       {invoice.paid ? (
@@ -294,18 +294,18 @@ export default function AreaFinanceira() {
           {courses.map((course) => (
             <div
               key={course.id}
-              className="flex justify-between items-center bg-gray-50 p-4 rounded"
+              className="flex justify-between items-center bg-muted p-4 rounded-lg"
             >
               <div>
                 <h5 className="font-semibold">{course.name}</h5>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Total Recebido: €{course.totalEarned.toFixed(2)}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Pendente: €{course.pendingPayment.toFixed(2)}
                 </p>
               </div>
-              <Button className="bg-gray-900 text-white text-small px-3 py-1 rounded hover:bg-gray-600">
+              <Button className="bg-foreground text-background text-small px-3 py-1 rounded-lg hover:opacity-90">
                 Detalhes
               </Button>
             </div>
@@ -314,12 +314,12 @@ export default function AreaFinanceira() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black text-white bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div className="fixed inset-0 z-50 bg-black/50 flex justify-center items-center p-4">
+          <div className="bg-card text-card-foreground border p-6 rounded-xl shadow-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Novo Lançamento</h2>
             <form onSubmit={handleInvoiceSubmit}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-foreground">
                   Data
                 </label>
                 <input
@@ -328,12 +328,12 @@ export default function AreaFinanceira() {
                   onChange={(e) =>
                     setNewInvoice({ ...newInvoice, date: e.target.value })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  className="mt-1 block w-full rounded-md border border-input bg-background shadow-sm"
                   required
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-foreground">
                   Curso
                 </label>
                 <select
@@ -341,7 +341,7 @@ export default function AreaFinanceira() {
                   onChange={(e) =>
                     setNewInvoice({ ...newInvoice, course: e.target.value })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  className="mt-1 block w-full rounded-md border border-input bg-background shadow-sm"
                   required
                 >
                   <option value="">Selecione um curso</option>
@@ -353,7 +353,7 @@ export default function AreaFinanceira() {
                 </select>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-foreground">
                   Horas
                 </label>
                 <input
@@ -365,12 +365,12 @@ export default function AreaFinanceira() {
                       hours: Number(e.target.value),
                     })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  className="mt-1 block w-full rounded-md border border-input bg-background shadow-sm"
                   required
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-foreground">
                   Valor
                 </label>
                 <input
@@ -382,7 +382,7 @@ export default function AreaFinanceira() {
                       amount: Number(e.target.value),
                     })
                   }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  className="mt-1 block w-full rounded-md border border-input bg-background shadow-sm"
                   required
                 />
               </div>
@@ -390,13 +390,13 @@ export default function AreaFinanceira() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                  className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/70 transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-600"
+                  className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition"
                 >
                   Salvar
                 </button>

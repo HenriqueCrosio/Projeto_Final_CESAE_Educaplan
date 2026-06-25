@@ -1,5 +1,5 @@
 import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Trophy } from "lucide-react"
 
 interface Course {
   name: string
@@ -10,13 +10,13 @@ interface MostPopularCourseProps {
 }
 
 export const MostPopularCourse: React.FC<MostPopularCourseProps> = ({ course }) => (
-  <Card className="col-span-full">
-    <CardHeader>
-      <CardTitle>Curso mais popular</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>{course.name}</p>
-    </CardContent>
-  </Card>
+  <div className="col-span-full rounded-xl border bg-card p-5 shadow-sm">
+    <div className="mb-3 flex items-center gap-2.5">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
+        <Trophy className="h-[18px] w-[18px]" />
+      </span>
+      <h3 className="font-display text-lg font-semibold tracking-tight">Curso mais popular</h3>
+    </div>
+    <p className="text-base font-medium text-foreground">{course.name}</p>
+  </div>
 )
-

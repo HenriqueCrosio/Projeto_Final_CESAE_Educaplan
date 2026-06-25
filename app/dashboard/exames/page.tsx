@@ -133,7 +133,7 @@ export default function ExamsPage() {
                       <li key={ex.id} className="flex items-center gap-2 p-2">
                         <input type="checkbox" checked={idx !== -1} onChange={() => toggleExercise(ex.id)} />
                         <span className="flex-1">{ex.title} ({ex.points} pts)</span>
-                        {idx !== -1 && <span className="text-xs text-blue-600">#{idx + 1}</span>}
+                        {idx !== -1 && <span className="text-xs text-primary">#{idx + 1}</span>}
                       </li>
                     );
                   })}

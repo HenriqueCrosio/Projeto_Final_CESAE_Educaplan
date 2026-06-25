@@ -102,7 +102,7 @@ export default async function StudentClassDetail({
                     ? { label: `Avaliado · ${sub.score ?? 0} pts`, cls: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" }
                     : sub?.status
                     ? { label: "Submetido", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
-                    : { label: "Por fazer", cls: "bg-blue-500/15 text-blue-600 dark:text-blue-400" };
+                    : { label: "Por fazer", cls: "bg-slate-500/15 text-slate-600 dark:text-slate-400" };
                 return (
                   <li key={e.id} className="rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow">
                     <a href={`/student/exames/${e.id}`} className="flex items-center justify-between gap-3 p-4">

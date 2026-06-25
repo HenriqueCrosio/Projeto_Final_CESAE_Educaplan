@@ -8,7 +8,7 @@ import { UpcomingLessons } from "./upcoming"
 import { MostPopularCourse } from "./most-popular-course"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, BookOpen, Layers, Presentation, ClipboardList, Users, Clock } from "lucide-react"
 import { minutesToHours } from "@/lib/utils"
 
 export const TeacherDashboard: React.FC = () => {
@@ -34,12 +34,12 @@ export const TeacherDashboard: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <StatCard title="Cursos" value={stats.totalCourses} />
-      <StatCard title="Módulos" value={stats.totalModules} />
-      <StatCard title="Aulas" value={stats.totalLessons} />
-      <StatCard title="Matrículas" value={stats.totalEnrollments} />
-      <StatCard title="Alunos" value={stats.totalStudents} />
-      <StatCard title="Duração média da aula" value={`${minutesToHours(stats.averageLessonDuration)} horas`} />
+      <StatCard title="Cursos" value={stats.totalCourses} icon={BookOpen} />
+      <StatCard title="Módulos" value={stats.totalModules} icon={Layers} />
+      <StatCard title="Aulas" value={stats.totalLessons} icon={Presentation} />
+      <StatCard title="Matrículas" value={stats.totalEnrollments} icon={ClipboardList} />
+      <StatCard title="Alunos" value={stats.totalStudents} icon={Users} />
+      <StatCard title="Duração média da aula" value={`${minutesToHours(stats.averageLessonDuration)} horas`} icon={Clock} />
       <UpcomingLessons lessons={stats.upcomingLessons} />
       {stats.mostPopularCourse && <MostPopularCourse course={stats.mostPopularCourse} />}
     </div>

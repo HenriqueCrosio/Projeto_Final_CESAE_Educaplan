@@ -128,7 +128,7 @@ export default function SchedulePage() {
                               variant="ghost"
                               onClick={() => setSelectedLesson(lesson)}
                               className={`text-left ${
-                                selectedLesson?.id === lesson.id ? "font-bold text-blue-600" : ""
+                                selectedLesson?.id === lesson.id ? "font-bold text-primary" : ""
                               }`}
                             >
                               {lesson.name} ({Math.round(lesson.duration)} min)

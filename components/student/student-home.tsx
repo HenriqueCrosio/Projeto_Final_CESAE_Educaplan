@@ -278,7 +278,7 @@ export function StudentHome({ summary, game, hub }: { summary: Summary; game: Ga
       {/* ── Resumo (o que fazer) ── */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard icon={GraduationCap} label="Turmas" value={summary.classCount} tint="bg-primary/10 text-primary" />
-        <StatCard icon={ClipboardList} label="Exames por fazer" value={summary.todo} tint="bg-blue-500/10 text-blue-500" />
+        <StatCard icon={ClipboardList} label="Exames por fazer" value={summary.todo} tint="bg-slate-500/10 text-slate-500" />
         <StatCard icon={Clock} label="A aguardar nota" value={summary.inProgress} tint="bg-amber-500/10 text-amber-500" />
         <StatCard icon={CheckCircle2} label="Avaliados" value={summary.graded} tint="bg-emerald-500/10 text-emerald-500" />
       </div>

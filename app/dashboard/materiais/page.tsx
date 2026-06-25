@@ -146,7 +146,7 @@ export default function MaterialsPage() {
                   <div>
                     <p className="font-semibold">
                       {m.url ? (
-                        <a href={m.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{m.name}</a>
+                        <a href={m.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{m.name}</a>
                       ) : (
                         m.name
                       )}

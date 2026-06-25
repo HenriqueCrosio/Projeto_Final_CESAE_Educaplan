@@ -150,7 +150,7 @@ const EnrollmentPage = () => {
                       <div
                         key={cls.id}
                         className={`border p-4 rounded cursor-pointer ${
-                          selectedClassIds.includes(cls.id) ? "bg-blue-100" : ""
+                          selectedClassIds.includes(cls.id) ? "border-primary bg-primary/10" : ""
                         }`}
                         onClick={() =>
                           setSelectedClassIds((prev) =>

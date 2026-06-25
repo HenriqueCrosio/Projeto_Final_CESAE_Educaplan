@@ -30,7 +30,7 @@ export default function CorrecoesPage() {
   const renderRow = (r: Row) => {
     const st = STATUS[r.status] ?? STATUS.SUBMITTED;
     return (
-      <li key={r.id} className="rounded-xl border bg-white shadow-sm transition hover:border-blue-300 hover:shadow">
+      <li key={r.id} className="rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow">
         <a href={`/dashboard/correcoes/${r.id}`} className="flex items-center justify-between gap-3 p-4">
           <div className="min-w-0">
             <p className="truncate font-medium">{r.exam.name}</p>

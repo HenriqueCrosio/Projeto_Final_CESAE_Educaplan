@@ -186,7 +186,7 @@ export function ExamRunner({ data }: { data: Data }) {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               {submitting ? "A submeter..." : "Submeter exame"}
             </button>
